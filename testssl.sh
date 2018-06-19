@@ -345,6 +345,7 @@ HAS_CIPHERSUITES=false
 HAS_SECLEVEL=false
 HAS_COMP=false
 HAS_NO_COMP=false
+HAS_PARTIAL_CHAIN=false
 HAS_ALPN=false
 HAS_NPN=false
 HAS_FALLBACK_SCSV=false
@@ -1967,7 +1968,7 @@ check_revocation_crl() {
      local -i success
 
      "$PHONE_OUT" || return 0
-     [[ -n "$GOOD_CA_BUNDLE" ]] || return 0
+     [[ -n "$GOOD_CA_BUNDLE" ]] || "$HAS_PARTIAL_CHAIN" || return 0
      scheme="$(tolower "${crl%%://*}")"
      # The code for obtaining CRLs only supports LDAP, HTTP, and HTTPS URLs.
      [[ "$scheme" == http ]] || [[ "$scheme" == https ]] || [[ "$scheme" == ldap ]] || return 0
@@ -1998,10 +1999,16 @@ check_revocation_crl() {
                return 1
           fi
      fi
-     if grep -qe '-----BEGIN CERTIFICATE-----' $TEMPDIR/intermediatecerts.pem; then
-          $OPENSSL verify -crl_check -CAfile <(cat $ADDTL_CA_FILES "$GOOD_CA_BUNDLE" "${tmpfile%%.crl}.pem") -untrusted $TEMPDIR/intermediatecerts.pem $HOSTCERT &> "${tmpfile%%.crl}.err"
+     if [[ -n "$GOOD_CA_BUNDLE" ]]; then
+          if grep -qe '-----BEGIN CERTIFICATE-----' $TEMPDIR/intermediatecerts.pem; then
+               $OPENSSL verify -crl_check -CAfile <(cat $ADDTL_CA_FILES "$GOOD_CA_BUNDLE" "${tmpfile%%.crl}.pem") -untrusted $TEMPDIR/intermediatecerts.pem $HOSTCERT &> "${tmpfile%%.crl}.err"
+          else
+               $OPENSSL verify -crl_check -CAfile <(cat $ADDTL_CA_FILES "$GOOD_CA_BUNDLE" "${tmpfile%%.crl}.pem") $HOSTCERT &> "${tmpfile%%.crl}.err"
+          fi
      else
-          $OPENSSL verify -crl_check -CAfile <(cat $ADDTL_CA_FILES "$GOOD_CA_BUNDLE" "${tmpfile%%.crl}.pem") $HOSTCERT &> "${tmpfile%%.crl}.err"
+          cat $TEMPDIR/intermediatecerts.pem "${tmpfile%%.crl}.pem" >$TEMPDIR/${NODE}-${NODEIP}-CRL-chain.pem
+          # See https://github.com/drwetter/testssl.sh/pull/1051
+          $OPENSSL verify -crl_check -partial_chain -CAfile $TEMPDIR/${NODE}-${NODEIP}-CRL-chain.pem $TEMPDIR/host_certificate.pem &> "${tmpfile%%.crl}.err"
      fi
      if [[ $? -eq 0 ]]; then
           out ", "
@@ -20336,6 +20343,13 @@ find_openssl_binary() {
      [[ "$(echo -e "\x78\x9C\xAB\xCA\xC9\x4C\xE2\x02\x00\x06\x20\x01\xBC" | $OPENSSL zlib -d 2>/dev/null)" == zlib ]] && HAS_ZLIB=true
 
      $OPENSSL verify -trusted_first </dev/null 2>&1 | grep -q '^usage' || TRUSTED1ST="-trusted_first"
+
+     $OPENSSL verify -partial_chain <<< "-----BEGIN CERTIFICATE-----
+MIGYMGYCAQEwCQYHKoZIzj0EATAAMB4XDTE4MDUwMjE5NDk1NVoXDTE4MDYwMTE5
+NDk1NVowADAyMBAGByqGSM49AgEGBSuBBAAGAx4ABIqtRNoHWKXwhKqS065E2p+0
+bGW4kYxYp8ON+FMwCQYHKoZIzj0EAQMjADAgAg4qMOUGcBYIn9OouAC6EwIODVw+
+r5TrwCZfR3CoB+k=
+-----END CERTIFICATE-----" 2>&1 | grep -aq "recognized usages" || HAS_PARTIAL_CHAIN=true
 
      if [[ -n "$CONNECT_TIMEOUT" ]] || [[ -n "$OPENSSL_TIMEOUT" ]]; then
           # We don't set a general timeout as we might not have "timeout" installed and we only
