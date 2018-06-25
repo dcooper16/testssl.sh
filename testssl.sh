@@ -6347,7 +6347,7 @@ run_cipherlists() {
 
      ossl_strong_ciphers='AESGCM:CHACHA20:CamelliaGCM:AESCCM:ARIAGCM:!kPSK:!kRSAPSK:!kRSA:!kDH:!kECDH:!aNULL'
      # grep AEAD etc/cipher-mapping.txt | grep -E 'TLS_ECDHE|TLS_DHE|TLS_PSK_DHE|TLSv1.3'
-     strong_ciphers="00,9E, 00,9F, 00,A2, 00,A3, 00,AA, 00,AB, 13,01, 13,02, 13,03, 13,04, 13,05, 16,B7, 16,B8, 16,B9, 16,BA, C0,2B, C0,2C, C0,2F, C0,30, C0,52, C0,53, C0,56, C0,57, C0,5C, C0,5D, C0,60, C0,61, C0,6C, C0,6D, C0,7C, C0,7D, C0,80, C0,81, C0,86, C0,87, C0,8A, C0,8B, C0,90, C0,91, C0,9E, C0,9F, C0,A2, C0,A3, C0,A6, C0,A7, C0,AA, C0,AB, C0,AC, C0,AD, C0,AE, C0,AF, CC,13, CC,14, CC,15, CC,A8, CC,A9, CC,AA, CC,AC, CC,AD, 00,FF"
+     strong_ciphers="00,9E, 00,9F, 00,A2, 00,A3, 00,AA, 00,AB, 13,01, 13,02, 13,03, 13,04, 13,05, 16,B7, 16,B8, 16,B9, 16,BA, C0,2B, C0,2C, C0,2F, C0,30, C0,52, C0,53, C0,56, C0,57, C0,5C, C0,5D, C0,60, C0,61, C0,6C, C0,6D, C0,7C, C0,7D, C0,80, C0,81, C0,86, C0,87, C0,8A, C0,8B, C0,90, C0,91, C0,9E, C0,9F, C0,A2, C0,A3, C0,A6, C0,A7, C0,AA, C0,AB, C0,AC, C0,AD, C0,AE, C0,AF, CC,13, CC,14, CC,15, CC,A8, CC,A9, CC,AA, CC,AC, CC,AD, EE,01, 00,FF"
 
      # argv[1]: non-TLSv1.3 cipher list to test in OpenSSL syntax
      # argv[2]: TLSv1.3 cipher list to test in OpenSSL syntax
@@ -15467,6 +15467,8 @@ prepare_tls_clienthello() {
                             [[ "$part2" == 0x14 ]]; then
                               ecc_cipher_suite_found=true && break
                          fi
+                    elif [[ "$part1" == "0xee" ]] && [[ "$part2" == "0x01" ]]; then
+                         ecc_cipher_suite_found=true && break
                     fi
                done
           fi
@@ -15492,17 +15494,17 @@ prepare_tls_clienthello() {
           if [[ 0x$tls_low_byte -le 0x03 ]]; then
                extension_signature_algorithms="
                00, 0d,                    # Type: signature_algorithms , see RFC 5246 and RFC 8422
-               00, 30, 00,2e,             # lengths
+               00, 34, 00,32,             # lengths
                06,01, 06,02, 06,03, 05,01, 05,02, 05,03, 04,01, 04,02, 04,03,
                03,01, 03,02, 03,03, 02,01, 02,02, 02,03,
-               08,04, 08,05, 08,06, 08,07, 08,08, 08,09, 08,0a, 08,0b"
+               08,04, 08,05, 08,06, 08,07, 08,08, 08,09, 08,0a, 08,0b, 06,0f, 06,10"
           else
                extension_signature_algorithms="
                00, 0d,                    # Type: signature_algorithms , see RFC 8446
-               00, 22, 00, 20,            # lengths
+               00, 26, 00, 24,            # lengths
                04,03, 05,03, 06,03, 08,04, 08,05, 08,06,
                04,01, 05,01, 06,01, 08,09, 08,0a, 08,0b,
-               08,07, 08,08, 02,01, 02,03"
+               08,07, 08,08, 02,01, 02,03, 06,0f, 06,10"
           fi
 
           extension_heartbeat="
