@@ -11843,12 +11843,30 @@ code2network() {
 # sockets inspired by https://blog.chris007.de/using-bash-for-network-socket-operation/
 # ARG1: hexbytes separated by commas, with a leading comma
 # ARG2: seconds to sleep
+# ARG3: the size of the first message fragment to send
 socksend_clienthello() {
      local data=""
+     local -i i first_fragment_size=0
+     local first_fragment
 
+     [[ -n "$3" ]] && first_fragment_size="$3"
      code2network "$1"
      data="$NW_STR"
      [[ "$DEBUG" -ge 4 ]] && echo && echo "\"$data\""
+     if [[ $first_fragment_size -ne 0 ]]; then
+          for (( i=1; i < ${#data}; i++ )); do
+               [[ "${data:i:1}" == '\' ]] && first_fragment_size=$first_fragment_size-1
+               [[ $first_fragment_size -eq 0 ]] && break
+          done
+          first_fragment="${data:0:i}"
+          data="${data:i}"
+          if [[ -z "$PRINTF" ]] ;then
+               # We could also use "dd ibs=1M obs=1M" here but is seems to be at max 3% slower
+               printf -- "$first_fragment" | cat >&5 2>/dev/null &
+          else
+               $PRINTF -- "$first_fragment" 2>/dev/null >&5 2>/dev/null &
+          fi
+     fi
      if [[ -z "$PRINTF" ]] ;then
           # We could also use "dd ibs=1M obs=1M" here but is seems to be at max 3% slower
           printf -- "$data" | cat >&5 2>/dev/null &
@@ -15396,7 +15414,7 @@ generate_key_share_extension() {
 # ARG4: (optional) additional request extensions
 # ARG5: (optional): "true" if ClientHello should advertise compression methods other than "NULL"
 # ARG6: (optional): "false" if prepare_tls_clienthello() should not open a new socket
-#
+# ARG7: (optional): the size of the first message fragment to send.
 prepare_tls_clienthello() {
      local tls_low_byte="$1" tls_legacy_version="$1"
      local process_full="$3"
@@ -15418,6 +15436,7 @@ prepare_tls_clienthello() {
      local extra_extensions extra_extensions_list="" extension_supported_versions=""
      local offer_compression=false compression_methods
      local padding_bytes="\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00"
+     local first_fragment_size="$7"
 
      # TLSv1.3 ClientHello messages MUST specify only the NULL compression method.
      [[ "$5" == true ]] && [[ "0x$tls_low_byte" -le "0x03" ]] && offer_compression=true
@@ -15811,7 +15830,7 @@ prepare_tls_clienthello() {
      fi
 
      debugme echo -n "sending client hello... "
-     socksend_clienthello "$TLS_CLIENT_HELLO$all_extensions" $USLEEP_SND
+     socksend_clienthello "$TLS_CLIENT_HELLO$all_extensions" $USLEEP_SND $first_fragment_size
 
      if [[ "$tls_low_byte" -gt 0x03 ]]; then
           TLS_CLIENT_HELLO="$(tolower "$NW_STR")"
@@ -16030,6 +16049,7 @@ resend_if_hello_retry_request() {
 # arg4: (optional) additional request extensions
 # arg5: (optional) "true" if ClientHello should advertise compression methods other than "NULL"
 # arg6: (optional) "false" if the connection should not be closed before the function returns.
+# arg7: (optional) the size of the first message fragment to send.
 # return: 0: successful connect   | 1: protocol or cipher not available | 2: as (0) but downgraded
 #         6: couldn't open socket | 7: couldn't open temp file
 tls_sockets() {
@@ -16069,7 +16089,7 @@ tls_sockets() {
      cipher_list_2send="$NW_STR"
 
      debugme echo -en "\nsending client hello... "
-     prepare_tls_clienthello "$tls_low_byte" "$cipher_list_2send" "$process_full" "$4" "$offer_compression"
+     prepare_tls_clienthello "$tls_low_byte" "$cipher_list_2send" "$process_full" "$4" "$offer_compression" "" "$7"
      ret=$?                             # 6 means opening socket didn't succeed, e.g. timeout
 
      # if sending didn't succeed we don't bother
@@ -19586,6 +19606,21 @@ run_grease() {
           if [[ $success -ne 0 ]] && [[ $success -ne 2 ]]; then
                prln_svrty_medium " Server fails if ClientHello is between 256 and 511 bytes in length."
                fileout "$jsonID" "MEDIUM" "Server fails if ClientHello is between 256 and 511 bytes in length."
+               bug_found=true
+          fi
+     fi
+
+     if "$normal_hello_ok"; then
+          for i in 5 6 7 8 5 6 7 8; do
+               debugme echo -e "\nSending ClientHello with first message fragment of length $i bytes."
+               tls_sockets "$proto" "$cipher_list" "" "" "" "" $i
+               success=$?
+               [[ $success -eq 0 ]] || [[ $success -eq 2 ]] && break
+               debugme tm_svrty_low "\nConnection failed on ClientHello with first message fragment of length $i bytes."
+          done
+          if [[ $success -ne 0 ]] && [[ $success -ne 2 ]]; then
+               prln_svrty_low " Server fails if ClientHello sent with first message fragment less than 9 bytes."
+               fileout "$jsonID" "LOW" "Server fails if ClientHello sent with first message fragment less than 9 bytes."
                bug_found=true
           fi
      fi
