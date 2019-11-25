@@ -253,6 +253,10 @@ FIRST_FINDING=true                      # is this the first finding we are outpu
 JSONHEADER=true                         # include JSON headers and footers in HTML file, if one is being created
 CSVHEADER=true                          # same for CSV
 HTMLHEADER=true                         # same for HTML
+JSONFILENAME_SET=false                  # Indicates whether json_header() has been called to set up JSONFILE.
+CSVFILENAME_SET=false                   # Indicates whether csv_header() has been called to set up CSVFILE.
+HTMLFILENAME_SET=false                  # Indicates whether html_header() has been called to set up HTMLFILE.
+LOGFILENAME_SET=false                   # Indicates whether prepare_logging() has been called to set up LOGFILE.
 SECTION_FOOTER_NEEDED=false             # kludge for tracking whether we need to close the JSON section object
 GIVE_HINTS=false                        # give an additional info to findings
 SERVER_SIZE_LIMIT_BUG=false             # Some servers have either a ClientHello total size limit or a 128 cipher limit (e.g. old ASAs)
@@ -555,7 +559,7 @@ html_out() {
      local outstr="$1"
 
      "$do_html" || return 0
-     if [[ -n "$HTMLFILE" ]] && [[ ! -d "$HTMLFILE" ]]; then
+     if "$HTMLFILENAME_SET" && [[ -n "$HTMLFILE" ]] && [[ ! -d "$HTMLFILE" ]]; then
           if [[ "$outstr" =~ [[:cntrl:]] ]]; then
                outstr="$(sanitize_fileout "$outstr")"
           fi
@@ -1191,7 +1195,7 @@ set_ciph_str_score() {
 #################### START JSON file functions ####################
 
 fileout_json_footer() {
-     if "$do_json"; then
+     if "$do_json" && "$JSONFILENAME_SET"; then
           if [[ "$SCAN_TIME" -eq 0 ]]; then
                fileout_json_finding "scanTime" "WARN" "Scan interrupted" "" "" ""
           elif [[ $SEVERITY_LEVEL -lt $LOW ]] ; then
@@ -1200,7 +1204,7 @@ fileout_json_footer() {
           fi
           printf "]\n" >> "$JSONFILE"
      fi
-     if "$do_pretty_json"; then
+     if "$do_pretty_json" && "$JSONFILENAME_SET"; then
           if [[ "$SCAN_TIME" -eq 0 ]]; then
                echo -e "          ],\n                    \"scanTime\"  : \"Scan interrupted\"\n}" >> "$JSONFILE"
           else
@@ -1231,14 +1235,14 @@ fileout_json_section() {
 fileout_section_header() {
      local str=""
      "$2" && str="$(fileout_section_footer false)"
-     "$do_pretty_json" && FIRST_FINDING=true && (printf "%s%s\n" "$str" "$(fileout_json_section "$1")") >> "$JSONFILE"
+     "$do_pretty_json" && "$JSONFILENAME_SET" && FIRST_FINDING=true && (printf "%s%s\n" "$str" "$(fileout_json_section "$1")") >> "$JSONFILE"
      SECTION_FOOTER_NEEDED=true
 }
 
 # arg1: whether to end object too
 fileout_section_footer() {
-     "$do_pretty_json" && FIRST_FINDING=false && printf "\n                    ]" >> "$JSONFILE"
-     "$do_pretty_json" && "$1" && echo -e "\n          }" >> "$JSONFILE"
+     "$do_pretty_json" && "$JSONFILENAME_SET" && FIRST_FINDING=false && printf "\n                    ]" >> "$JSONFILE"
+     "$do_pretty_json" && "$JSONFILENAME_SET" && "$1" && echo -e "\n          }" >> "$JSONFILE"
      SECTION_FOOTER_NEEDED=false
 }
 
@@ -1268,7 +1272,7 @@ fileout_json_finding() {
      local cwe="$5"
      local hint="$6"
 
-     if "$do_json"; then
+     if "$do_json" && "$JSONFILENAME_SET"; then
           "$FIRST_FINDING" || echo -n "," >> "$JSONFILE"
           echo -e "         {"  >> "$JSONFILE"
           fileout_json_print_parameter "id" "           " "$1" true
@@ -1281,7 +1285,7 @@ fileout_json_finding() {
           fileout_json_print_parameter "finding" "      " "$finding" false
           echo -e "\n          }" >> "$JSONFILE"
      fi
-     if "$do_pretty_json"; then
+     if "$do_pretty_json" && "$JSONFILENAME_SET"; then
           if [[ "$1" == service ]]; then
                if [[ $SERVER_COUNTER -gt 1 ]]; then
                     echo "          ," >> "$JSONFILE"
@@ -1332,14 +1336,14 @@ fileout_pretty_json_banner() {
 fileout_banner() {
      if "$JSONHEADER"; then
           # "$do_json" &&                    # here we maybe should add a banner, too
-          "$do_pretty_json" && FIRST_FINDING=true && (printf "%s\n" "$(fileout_pretty_json_banner)") >> "$JSONFILE"
+          "$do_pretty_json" && "$JSONFILENAME_SET" && FIRST_FINDING=true && (printf "%s\n" "$(fileout_pretty_json_banner)") >> "$JSONFILE"
      fi
 }
 
 fileout_separator() {
      if "$JSONHEADER"; then
-          "$do_pretty_json" && echo "          ," >> "$JSONFILE"
-          "$do_json" && echo -n "," >> "$JSONFILE"
+          "$do_pretty_json" && "$JSONFILENAME_SET" && echo "          ," >> "$JSONFILE"
+          "$do_json" && "$JSONFILENAME_SET" && echo -n "," >> "$JSONFILE"
      fi
 }
 
@@ -1363,13 +1367,13 @@ fileout_insert_warning() {
      [[ "$CMDLINE=" =~ -iL ]] && return 0
      # Note we still have the message on screen + in HTML which is not as optimal as it could be
 
-     if "$do_pretty_json" && "$JSONHEADER"; then
+     if "$do_pretty_json" && "$JSONFILENAME_SET" && "$JSONHEADER"; then
           echo -e "          \"clientProblem${CLIENT_PROB_NO}\" : [" >>"$JSONFILE"
           CLIENT_PROB_NO=$((CLIENT_PROB_NO + 1))
           FIRST_FINDING=true       # make sure we don't have a comma here
      fi
      fileout "$1" "$2" "$3"
-     if "$do_pretty_json"; then
+     if "$do_pretty_json" && "$JSONFILENAME_SET"; then
           if "$JSONHEADER"; then
                echo -e "\n          ]," >>"$JSONFILE"
           else
@@ -1411,8 +1415,8 @@ fileout() {
 
      if { "$do_pretty_json" && [[ "$1" == service ]]; } || show_finding "$severity"; then
           local finding=$(strip_lf "$(newline_to_spaces "$(strip_quote "$3")")")           # additional quotes will mess up screen output
-          [[ -e "$JSONFILE" ]] && [[ ! -d "$JSONFILE" ]] && fileout_json_finding "$1" "$severity" "$finding" "$cve" "$cwe" "$hint"
-          "$do_csv" && [[ -n "$CSVFILE" ]] && [[ ! -d "$CSVFILE" ]] && \
+          "$JSONFILENAME_SET" && [[ -e "$JSONFILE" ]] && [[ ! -d "$JSONFILE" ]] && fileout_json_finding "$1" "$severity" "$finding" "$cve" "$cwe" "$hint"
+          "$do_csv" && "$CSVFILENAME_SET" && [[ -n "$CSVFILE" ]] && [[ ! -d "$CSVFILE" ]] && \
                fileout_csv_finding "$1" "$NODE/$NODEIP" "$PORT" "$severity" "$finding" "$cve" "$cwe" "$hint"
           "$FIRST_FINDING" && FIRST_FINDING=false
      fi
@@ -1434,7 +1438,7 @@ json_header() {
      #  * this is an individual test within a mass test and all output is being placed in a single file.
      ! "$do_json" && ! "$do_pretty_json" && JSONHEADER=false && return 0
      "$do_mass_testing" && ! "$filename_provided" && JSONHEADER=false && return 0
-     "$CHILD_MASS_TESTING" && "$filename_provided" && [[ -n "$PARENT_JSONFILE" ]] && JSONHEADER=false && return 0
+     "$CHILD_MASS_TESTING" && "$filename_provided" && [[ -n "$PARENT_JSONFILE" ]] && JSONHEADER=false && JSONFILENAME_SET=true && return 0
 
      if "$do_display_only"; then
           fname_prefix="local-ciphers"
@@ -1466,6 +1470,7 @@ json_header() {
           "$do_json" && echo "[" > "$JSONFILE"
           "$do_pretty_json" && echo "{" > "$JSONFILE"
      fi
+     JSONFILENAME_SET=true
      return 0
 }
 
@@ -1482,7 +1487,7 @@ csv_header() {
      # CSV similar to JSON
      ! "$do_csv" && CSVHEADER=false && return 0
      "$do_mass_testing" && ! "$filename_provided" && CSVHEADER=false && return 0
-     "$CHILD_MASS_TESTING" && "$filename_provided" && [[ -n "$PARENT_CSVFILE" ]] && CSVHEADER=false && return 0
+     "$CHILD_MASS_TESTING" && "$filename_provided" && [[ -n "$PARENT_CSVFILE" ]] && CSVHEADER=false && CSVFILENAME_SET=true && return 0
 
      if "$do_display_only"; then
           fname_prefix="local-ciphers"
@@ -1506,11 +1511,13 @@ csv_header() {
      fi
      if "$APPEND"; then
           CSVHEADER=false
+          CSVFILENAME_SET=true
      else
           if [[ -s "$CSVFILE" ]]; then
                "$OVERWRITE" || fatal_cmd_line "non-empty \"$CSVFILE\" exists. Either use \"--append\" or (re)move it" $ERR_FCREATE
                cp /dev/null "$CSVFILE"
           fi
+          CSVFILENAME_SET=true
           touch "$CSVFILE"
           if "$GIVE_HINTS"; then
                fileout_csv_finding "id" "fqdn/ip" "port" "severity" "finding" "cve" "cwe" "hint"
@@ -1539,7 +1546,7 @@ html_header() {
      #  * this is an individual test within a mass test and all HTML output is being placed in a single file.
      ! "$do_html" && HTMLHEADER=false && return 0
      "$do_mass_testing" && ! "$filename_provided" && HTMLHEADER=false && return 0
-     "$CHILD_MASS_TESTING" && "$filename_provided" && [[ -n "$PARENT_HTMLFILE" ]] && HTMLHEADER=false && return 0
+     "$CHILD_MASS_TESTING" && "$filename_provided" && [[ -n "$PARENT_HTMLFILE" ]] && HTMLHEADER=false && HTMLFILENAME_SET=true && return 0
 
      if "$do_display_only"; then
           fname_prefix="local-ciphers"
@@ -1563,11 +1570,13 @@ html_header() {
      fi
      if "$APPEND"; then
           HTMLHEADER=false
+          HTMLFILENAME_SET=true
      else
           if [[ -s "$HTMLFILE" ]]; then
                "$OVERWRITE" || fatal_cmd_line "non-empty \"$HTMLFILE\" exists. Either use \"--append\" or (re)move it" $ERR_FCREATE
                cp /dev/null "$HTMLFILE"
           fi
+          HTMLFILENAME_SET=true
           html_out "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
           html_out "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n"
           html_out "<!-- This file was created with testssl.sh. https://testssl.sh -->\n"
@@ -1616,7 +1625,7 @@ prepare_logging() {
      # Similar to html_header():
      ! "$do_logging" && return 0
      "$do_mass_testing" && ! "$filename_provided" && return 0
-     "$CHILD_MASS_TESTING" && "$filename_provided" && [[ -n "$PARENT_LOGFILE" ]] && return 0
+     "$CHILD_MASS_TESTING" && "$filename_provided" && [[ -n "$PARENT_LOGFILE" ]] && LOGFILENAME_SET=true && return 0
 
      [[ -z "$fname_prefix" ]] && fname_prefix="${FNAME_PREFIX}${NODE}_p${PORT}"
 
@@ -1635,6 +1644,7 @@ prepare_logging() {
                cp /dev/null "$LOGFILE"
           fi
      fi
+     LOGFILENAME_SET=true
      tmln_out "## Scan started as: \"$PROG_NAME $CMDLINE\"" >>"$LOGFILE"
      tmln_out "## at $HNAME:$OPENSSL_LOCATION" >>"$LOGFILE"
      tmln_out "## version testssl: $VERSION ${GIT_REL_SHORT} from $REL_DATE" >>"$LOGFILE"
@@ -20912,10 +20922,10 @@ child_error() {
 fatal() {
      outln
      prln_magenta "Fatal error: $1" >&2
-     [[ -n "$LOGFILE" ]] && prln_magenta "Fatal error: $1" >>$LOGFILE
+     "$LOGFILENAME_SET" && [[ -n "$LOGFILE" ]] && prln_magenta "Fatal error: $1" >>$LOGFILE
      if [[ -n "$3" ]]; then
           outln "$3" >&2
-          [[ -n "$LOGFILE" ]] && outln "$3" >>$LOGFILE
+          "$LOGFILENAME_SET" && [[ -n "$LOGFILE" ]] && outln "$3" >>$LOGFILE
      fi
      # Make sure we don't try to write into files when not created yet.
      # No shorthand expression to avoid errors when $CMDLINE_PARSED haven't been filled yet.
@@ -20952,7 +20962,7 @@ fatal_cmd_line() {
 ip_fatal() {
      outln
      prln_magenta "Fatal error: $1, proceeding with next IP (if any)" >&2
-     [[ -n "$LOGFILE" ]] && prln_magenta "Fatal error: $1, proceeding with next IP (if any)" >>$LOGFILE
+     "$LOGFILENAME_SET" && [[ -n "$LOGFILE" ]] && prln_magenta "Fatal error: $1, proceeding with next IP (if any)" >>$LOGFILE
      outln
      fileout "scanProblem" "FATAL" "$1, proceeding with next IP (if any)"
      return 0
@@ -20964,7 +20974,7 @@ ip_fatal() {
 generic_nonfatal() {
      prln_magenta "$1" >&2
      [[ -n $2 ]] && outln "$2"
-     [[ -n "$LOGFILE" ]] && prln_magenta "$1" >>$LOGFILE && [[ -n $2 ]] && outln "$2" >>$LOGFILE
+     "$LOGFILENAME_SET" && [[ -n "$LOGFILE" ]] && prln_magenta "$1" >>$LOGFILE && [[ -n $2 ]] && outln "$2" >>$LOGFILE
      outln
      fileout "scanProblem" "WARN" "$1"
      return 0
