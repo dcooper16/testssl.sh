@@ -153,6 +153,8 @@ The same can be achieved by setting the environment variable `WARNINGS`.
 
 `--add-ca <CAfile>` enables you to add your own CA(s) in PEM format for trust chain checks. `CAfile` can be a directory containing files with a \.pem extension, a single file or multiple files as a comma separated list of root CAs. Internally they will be added during runtime to all CA stores. This is (only) useful for internal hosts whose certificates are issued by internal CAs. Alternatively ADDTL_CA_FILES is the environment variable for this.
 
+`--nist` indicates that testing should check for conformance to the recommendations of the U.S. National Institute of Standards and Technology (NIST), including NIST Special Publication (SP) 800-53 Revision 2 and SP 800-56A Revision 3. This switch will affect, for example, the ratings that are applied to cipher suites. NIST is the environment variable for this which needs to be set to true if you want this.
+
 
 ### SINGLE CHECK OPTIONS
 

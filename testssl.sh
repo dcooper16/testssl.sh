@@ -189,6 +189,7 @@ HAS_IPv6=${HAS_IPv6:-false}             # if you have OpenSSL with IPv6 support 
 ALL_CLIENTS=${ALL_CLIENTS:-false}       # do you want to run all client simulation form all clients supplied by SSLlabs?
 OFFENSIVE=${OFFENSIVE:-true}            # do you want to include offensive vulnerability tests which may cause blocking by an IDS?
 ADDTL_CA_FILES="${ADDTL_CA_FILES:-""}"  # single file with a CA in PEM format or comma separated lists of them
+NIST=${NIST:-false}                     # test for conformance to NIST Special Publication 800-52 Revision 2
 
 ########### Tuning vars which cannot be set by a cmd line switch. Use instead e.g "HEADER_MAXSLEEP=10 ./testssl.sh <your_args_here>"
 #
@@ -456,6 +457,20 @@ declare TLS_CIPHER_EXPORT=()
 declare TLS_CIPHER_OSSL_SUPPORTED=()
 declare TLS13_OSSL_CIPHERS="TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256"
 
+##### SP 800-52 related globals ######
+
+# List of ciphers that SHALL, SHOULD, or MAY be supported according to NIST SP 800-52 Revision 1.
+readonly SP800_52R1_RFC_CIPHERS_SHALL_MAY_SUPPORT="TLS_RSA_WITH_3DES_EDE_CBC_SHA TLS_RSA_WITH_AES_128_CBC_SHA TLS_RSA_WITH_AES_256_CBC_SHA TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA TLS_RSA_WITH_AES_128_GCM_SHA256 TLS_RSA_WITH_AES_256_GCM_SHA384 TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256 TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 TLS_RSA_WITH_AES_128_CBC_SHA256 TLS_RSA_WITH_AES_256_CBC_SHA256 TLS_RSA_WITH_AES_128_CCM TLS_RSA_WITH_AES_256_CCM TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256 TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384 TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA TLS_DHE_DSS_WITH_AES_128_CBC_SHA TLS_DHE_DSS_WITH_AES_256_CBC_SHA TLS_DHE_DSS_WITH_AES_128_CBC_SHA256 TLS_DHE_DSS_WITH_AES_256_CBC_SHA256 TLS_DHE_DSS_WITH_AES_128_GCM_SHA256 TLS_DHE_DSS_WITH_AES_256_GCM_SHA384 TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA TLS_DH_DSS_WITH_AES_128_CBC_SHA TLS_DH_DSS_WITH_AES_256_CBC_SHA TLS_DH_DSS_WITH_AES_128_CBC_SHA256 TLS_DH_DSS_WITH_AES_256_CBC_SHA256 TLS_DH_DSS_WITH_AES_128_GCM_SHA256 TLS_DH_DSS_WITH_AES_256_GCM_SHA384 TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256 TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384 TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256 TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384 TLS_PSK_WITH_3DES_EDE_CBC_SHA TLS_PSK_WITH_AES_128_CBC_SHA TLS_PSK_WITH_AES_256_CBC_SHA TLS_PSK_WITH_AES_128_GCM_SHA256 TLS_PSK_WITH_AES_256_GCM_SHA384 TLS_DHE_PSK_WITH_3DES_EDE_CBC_SHA TLS_DHE_PSK_WITH_AES_128_CBC_SHA TLS_DHE_PSK_WITH_AES_256_CBC_SHA TLS_DHE_PSK_WITH_AES_128_GCM_SHA256 TLS_DHE_PSK_WITH_AES_256_GCM_SHA384 TLS_RSA_PSK_WITH_3DES_EDE_CBC_SHA TLS_RSA_PSK_WITH_AES_128_CBC_SHA TLS_RSA_PSK_WITH_AES_256_CBC_SHA TLS_RSA_PSK_WITH_AES_128_GCM_SHA256 TLS_RSA_PSK_WITH_AES_256_GCM_SHA384 TLS_ECDHE_PSK_WITH_3DES_EDE_CBC_SHA TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256 TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA384 TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA TLS_DH_RSA_WITH_AES_128_CBC_SHA TLS_DHE_RSA_WITH_AES_128_CBC_SHA TLS_DH_RSA_WITH_AES_256_CBC_SHA TLS_DHE_RSA_WITH_AES_256_CBC_SHA TLS_DH_RSA_WITH_AES_128_CBC_SHA256 TLS_DHE_RSA_WITH_AES_128_CBC_SHA256 TLS_DH_RSA_WITH_AES_256_CBC_SHA256 TLS_DHE_RSA_WITH_AES_256_CBC_SHA256 TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 TLS_DHE_RSA_WITH_AES_256_GCM_SHA384 TLS_DH_RSA_WITH_AES_128_GCM_SHA256 TLS_DH_RSA_WITH_AES_256_GCM_SHA384 TLS_PSK_WITH_AES_128_CBC_SHA256 TLS_PSK_WITH_AES_256_CBC_SHA384 TLS_DHE_PSK_WITH_AES_128_CBC_SHA256 TLS_DHE_PSK_WITH_AES_256_CBC_SHA384 TLS_RSA_PSK_WITH_AES_128_CBC_SHA256 TLS_RSA_PSK_WITH_AES_256_CBC_SHA384 TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA TLS_ECDH_RSA_WITH_AES_128_CBC_SHA TLS_ECDH_RSA_WITH_AES_256_CBC_SHA TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384 TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256 TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384 TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256 TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384 TLS_DHE_RSA_WITH_AES_128_CCM TLS_DHE_RSA_WITH_AES_256_CCM TLS_PSK_WITH_AES_128_CCM TLS_PSK_WITH_AES_256_CCM TLS_DHE_PSK_WITH_AES_128_CCM TLS_DHE_PSK_WITH_AES_256_CCM TLS_ECDHE_ECDSA_WITH_AES_128_CCM TLS_ECDHE_ECDSA_WITH_AES_256_CCM"
+
+readonly SP800_52R1_OSSL_CIPHERS_SHALL_MAY_SUPPORT="ECDHE-RSA-AES256-GCM-SHA384 ECDHE-ECDSA-AES256-GCM-SHA384 ECDHE-RSA-AES256-SHA384 ECDHE-ECDSA-AES256-SHA384 ECDHE-RSA-AES256-SHA ECDHE-ECDSA-AES256-SHA DHE-PSK-AES256-CBC-SHA384 DHE-PSK-AES256-CBC-SHA PSK-AES256-CBC-SHA384 DH-DSS-AES256-GCM-SHA384 DHE-DSS-AES256-GCM-SHA384 DH-RSA-AES256-GCM-SHA384 DHE-RSA-AES256-GCM-SHA384 ECDHE-ECDSA-AES256-CCM DHE-RSA-AES256-CCM8 DHE-RSA-AES256-CCM DHE-RSA-AES256-SHA256 DHE-DSS-AES256-SHA256 DH-RSA-AES256-SHA256 DH-DSS-AES256-SHA256 DHE-RSA-AES256-SHA DHE-DSS-AES256-SHA DH-RSA-AES256-SHA DH-DSS-AES256-SHA DHE-PSK-AES256-GCM-SHA384 DHE-PSK-AES256-CCM ECDH-RSA-AES256-GCM-SHA384 ECDH-ECDSA-AES256-GCM-SHA384 ECDH-RSA-AES256-SHA384 ECDH-ECDSA-AES256-SHA384 ECDH-RSA-AES256-SHA ECDH-ECDSA-AES256-SHA PSK-AES256-GCM-SHA384 PSK-AES256-CCM ECDHE-PSK-AES256-CBC-SHA384 ECDHE-PSK-AES256-CBC-SHA PSK-AES256-CBC-SHA ECDHE-RSA-AES128-GCM-SHA256 ECDHE-ECDSA-AES128-GCM-SHA256 ECDHE-RSA-AES128-SHA256 ECDHE-ECDSA-AES128-SHA256 ECDHE-RSA-AES128-SHA ECDHE-ECDSA-AES128-SHA DH-DSS-AES128-GCM-SHA256 DHE-DSS-AES128-GCM-SHA256 DH-RSA-AES128-GCM-SHA256 DHE-RSA-AES128-GCM-SHA256 ECDHE-ECDSA-AES128-CCM DHE-RSA-AES128-CCM8 DHE-RSA-AES128-CCM DHE-PSK-AES128-GCM-SHA256 DHE-PSK-AES128-CCM PSK-AES128-GCM-SHA256 PSK-AES128-CCM DHE-RSA-AES128-SHA256 DHE-DSS-AES128-SHA256 DH-RSA-AES128-SHA256 DH-DSS-AES128-SHA256 DHE-RSA-AES128-SHA DHE-DSS-AES128-SHA DH-RSA-AES128-SHA DH-DSS-AES128-SHA ECDH-RSA-AES128-GCM-SHA256 ECDH-ECDSA-AES128-GCM-SHA256 ECDH-RSA-AES128-SHA256 ECDH-ECDSA-AES128-SHA256 ECDH-RSA-AES128-SHA ECDH-ECDSA-AES128-SHA ECDHE-PSK-AES128-CBC-SHA256 ECDHE-PSK-AES128-CBC-SHA DHE-PSK-AES128-CBC-SHA256 DHE-PSK-AES128-CBC-SHA PSK-AES128-CBC-SHA256 PSK-AES128-CBC-SHA ECDHE-RSA-DES-CBC3-SHA ECDHE-ECDSA-DES-CBC3-SHA EDH-RSA-DES-CBC3-SHA EDH-DSS-DES-CBC3-SHA DH-RSA-DES-CBC3-SHA DH-DSS-DES-CBC3-SHA ECDH-RSA-DES-CBC3-SHA ECDH-ECDSA-DES-CBC3-SHA PSK-3DES-EDE-CBC-SHA ECDHE-PSK-3DES-EDE-CBC-SHA DHE-PSK-3DES-EDE-CBC-SHA"
+
+# List of ciphers that MAY be supported according to NIST SP 800-52 Revision 2.
+readonly SP800_52R2_RFC_CIPHERS_MAY_SUPPORT="TLS_AES_256_GCM_SHA384 TLS_AES_128_GCM_SHA256 TLS_AES_128_CCM_SHA256 TLS_AES_128_CCM_8_SHA256 TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 TLS_ECDHE_ECDSA_WITH_AES_128_CCM TLS_ECDHE_ECDSA_WITH_AES_256_CCM TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8 TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8 TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256 TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384 TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 TLS_DHE_RSA_WITH_AES_256_GCM_SHA384 TLS_DHE_RSA_WITH_AES_128_CCM TLS_DHE_RSA_WITH_AES_256_CCM TLS_DHE_RSA_WITH_AES_128_CCM_8 TLS_DHE_RSA_WITH_AES_256_CCM_8 TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256 TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384 TLS_DHE_RSA_WITH_AES_128_CBC_SHA256 TLS_DHE_RSA_WITH_AES_256_CBC_SHA256 TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA TLS_DHE_RSA_WITH_AES_128_CBC_SHA TLS_DHE_RSA_WITH_AES_256_CBC_SHA TLS_DHE_DSS_WITH_AES_128_GCM_SHA256 TLS_DHE_DSS_WITH_AES_256_GCM_SHA384 TLS_DHE_DSS_WITH_AES_128_CBC_SHA256 TLS_DHE_DSS_WITH_AES_256_CBC_SHA256 TLS_DHE_DSS_WITH_AES_128_CBC_SHA TLS_DHE_DSS_WITH_AES_256_CBC_SHA TLS_DH_DSS_WITH_AES_128_GCM_SHA256 TLS_DH_DSS_WITH_AES_256_GCM_SHA384 TLS_DH_DSS_WITH_AES_128_CBC_SHA256 TLS_DH_DSS_WITH_AES_256_CBC_SHA256 TLS_DH_DSS_WITH_AES_128_CBC_SHA TLS_DH_DSS_WITH_AES_256_CBC_SHA TLS_DH_RSA_WITH_AES_128_GCM_SHA256 TLS_DH_RSA_WITH_AES_256_GCM_SHA384 TLS_DH_RSA_WITH_AES_128_CBC_SHA256 TLS_DH_RSA_WITH_AES_256_CBC_SHA256 TLS_DH_RSA_WITH_AES_128_CBC_SHA TLS_DH_RSA_WITH_AES_256_CBC_SHA TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256 TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384 TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256 TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384 TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256 TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384 TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256 TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384 TLS_ECDH_RSA_WITH_AES_128_CBC_SHA TLS_ECDH_RSA_WITH_AES_256_CBC_SHA TLS_DHE_PSK_WITH_AES_128_GCM_SHA256 TLS_DHE_PSK_WITH_AES_256_GCM_SHA384 TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256 TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA384 TLS_DHE_PSK_WITH_AES_128_CCM TLS_DHE_PSK_WITH_AES_256_CCM TLS_PSK_DHE_WITH_AES_128_CCM_8 TLS_PSK_DHE_WITH_AES_256_CCM_8 TLS_DHE_PSK_WITH_AES_128_CBC_SHA256 TLS_DHE_PSK_WITH_AES_256_CBC_SHA384 TLS_PSK_WITH_AES_128_GCM_SHA256 TLS_PSK_WITH_AES_256_GCM_SHA384 TLS_PSK_WITH_AES_128_CCM TLS_PSK_WITH_AES_256_CCM TLS_PSK_WITH_AES_128_CCM_8 TLS_PSK_WITH_AES_256_CCM_8 TLS_PSK_WITH_AES_128_CBC_SHA256 TLS_PSK_WITH_AES_256_CBC_SHA384 TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA TLS_DHE_PSK_WITH_AES_128_CBC_SHA TLS_DHE_PSK_WITH_AES_256_CBC_SHA TLS_PSK_WITH_AES_128_CBC_SHA TLS_PSK_WITH_AES_256_CBC_SHA TLS_RSA_WITH_AES_128_CCM TLS_RSA_WITH_AES_256_CCM TLS_RSA_WITH_AES_128_CCM_8 TLS_RSA_WITH_AES_256_CCM_8 TLS_RSA_WITH_AES_128_CBC_SHA TLS_RSA_WITH_AES_256_CBC_SHA TLS_RSA_WITH_AES_128_CBC_SHA256 TLS_RSA_WITH_AES_256_CBC_SHA256 TLS_RSA_WITH_AES_128_GCM_SHA256 TLS_RSA_WITH_AES_256_GCM_SHA384"
+
+readonly SP800_52R2_OSSL_CIPHERS_MAY_SUPPORT="TLS13-AES-256-GCM-SHA384 TLS13-AES-128-GCM-SHA256 TLS13-AES-128-CCM-SHA256 TLS13-AES-128-CCM-8-SHA256 AEAD-AES256-GCM-SHA384 AEAD-AES128-GCM-SHA256 ECDHE-ECDSA-AES128-GCM-SHA256 ECDHE-ECDSA-AES256-GCM-SHA384 ECDHE-ECDSA-AES128-CCM ECDHE-ECDSA-AES256-CCM ECDHE-ECDSA-AES128-CCM8 ECDHE-ECDSA-AES256-CCM8 ECDHE-ECDSA-AES128-SHA256 ECDHE-ECDSA-AES256-SHA384 ECDHE-ECDSA-AES128-SHA ECDHE-ECDSA-AES256-SHA ECDHE-RSA-AES128-GCM-SHA256 ECDHE-RSA-AES256-GCM-SHA384 DHE-RSA-AES128-GCM-SHA256 DHE-RSA-AES256-GCM-SHA384 DHE-RSA-AES128-CCM DHE-RSA-AES256-CCM DHE-RSA-AES128-CCM8 DHE-RSA-AES256-CCM8 ECDHE-RSA-AES128-SHA256 ECDHE-RSA-AES256-SHA384 DHE-RSA-AES128-SHA256 DHE-RSA-AES256-SHA256 ECDHE-RSA-AES128-SHA ECDHE-RSA-AES256-SHA DHE-RSA-AES128-SHA DHE-RSA-AES256-SHA DHE-DSS-AES128-GCM-SHA256 DHE-DSS-AES256-GCM-SHA384 DHE-DSS-AES128-SHA256 DHE-DSS-AES256-SHA256 DHE-DSS-AES128-SHA DHE-DSS-AES256-SHA DH-DSS-AES128-GCM-SHA256 DH-DSS-AES256-GCM-SHA384 DH-DSS-AES128-SHA256 DH-DSS-AES256-SHA256 DH-DSS-AES128-SHA DH-DSS-AES256-SHA DH-RSA-AES128-GCM-SHA256 DH-RSA-AES256-GCM-SHA384 DH-RSA-AES128-SHA256 DH-RSA-AES256-SHA256 DH-RSA-AES128-SHA DH-RSA-AES256-SHA ECDH-ECDSA-AES128-GCM-SHA256 ECDH-ECDSA-AES256-GCM-SHA384 ECDH-ECDSA-AES128-SHA256 ECDH-ECDSA-AES256-SHA384 ECDH-ECDSA-AES128-SHA ECDH-ECDSA-AES256-SHA ECDH-RSA-AES128-GCM-SHA256 ECDH-RSA-AES256-GCM-SHA384 ECDH-RSA-AES128-SHA256 ECDH-RSA-AES256-SHA384 ECDH-RSA-AES128-SHA ECDH-RSA-AES256-SHA DHE-PSK-AES128-GCM-SHA256 DHE-PSK-AES256-GCM-SHA384 ECDHE-PSK-AES128-CBC-SHA256 ECDHE-PSK-AES256-CBC-SHA384 DHE-PSK-AES128-CCM DHE-PSK-AES256-CCM DHE-PSK-AES128-CCM8 DHE-PSK-AES256-CCM8 DHE-PSK-AES128-CBC-SHA256 DHE-PSK-AES256-CBC-SHA384 PSK-AES128-GCM-SHA256 PSK-AES256-GCM-SHA384 PSK-AES128-CCM PSK-AES256-CCM PSK-AES128-CCM8 PSK-AES256-CCM8 PSK-AES128-CBC-SHA256 PSK-AES256-CBC-SHA384 ECDHE-PSK-AES128-CBC-SHA ECDHE-PSK-AES256-CBC-SHA DHE-PSK-AES128-CBC-SHA DHE-PSK-AES256-CBC-SHA PSK-AES128-CBC-SHA PSK-AES256-CBC-SHA AES128-CCM AES256-CCM AES128-CCM8 AES256-CCM8 AES128-SHA AES256-SHA AES128-SHA256 AES256-SHA256 AES128-GCM-SHA256 AES256-GCM-SHA384"
+
+# List of approved elliptic curves from SP 800-56A Rev. 3, Appendix D.
+readonly SP800_56A_CURVES="secp224r1 prime256v1 secp384r1 secp521r1 sect233k1 sect283k1 sect409k1 sect571k1 sect233r1 sect283r1 sect409r1 sect571r1 P-224 P-256 P-384 P-521 K-233 K-283 K-409 K-571 B-233 B-283 B-409 B-571"
 
 ########### Some predefinitions: date, sed (we always use tests for binaries and NOT try to determine
 #   capabilities by querying the OS)
@@ -2771,6 +2786,7 @@ run_hsts() {
                else
                     hsts_age_days=-1
                fi
+               "$NIST" && [[ "$HSTS_MIN" -lt 31536000 ]] && HSTS_MIN=31536000 # see https://https.cio.gov/guide
                if [[ $hsts_age_days -eq -1 ]]; then
                     pr_svrty_medium "misconfiguration: HSTS max-age (recommended > $HSTS_MIN seconds = $((HSTS_MIN/86400)) days ) is required but missing"
                     fileout "${jsonID}_time" "MEDIUM" "misconfiguration, parameter max-age (recommended > $HSTS_MIN seconds = $((HSTS_MIN/86400)) days) missing"
@@ -3731,7 +3747,22 @@ neat_list(){
                print_fixed_width "$ossl_cipher" 33 pr_cipher_quality
           fi
      fi
-     out "$what_dh"
+     if "$NIST" && [[ $COLOR -ge 3 ]]; then
+          if ( [[ "$what_dh" == CECPQ1 ]] || [[ "$what_dh" == GOST ]] || \
+               [[ "$what_dh" == SRP ]] || [[ "$what_dh" == RSA\(1024\) ]] || \
+               [[ "$what_dh" == RSA\(512\) ]] || [[ "$what_dh" == DH\(1024\) ]] || \
+               [[ "$what_dh" == DH\(512\) ]] || [[ "$what_dh" == None ]] ); then
+               pr_svrty_critical "$what_dh"
+          elif [[ "$what_dh" == RSA ]]; then
+               pr_svrty_low "$what_dh"
+          elif [[ "$what_dh" == RSAPSK ]]; then
+               pr_svrty_medium "$what_dh"
+          else
+               out "$what_dh"
+          fi
+     else
+          out "$what_dh"
+     fi
      if [[ -n "$bits" ]]; then
           if [[ $what_dh == DH ]] || [[ $what_dh == EDH ]]; then
                pr_dh_quality "$bits" " $bits"
@@ -3741,7 +3772,30 @@ neat_list(){
      fi
      len=${#kx}
      print_n_spaces "$((10-len))"
-     out "$(printf -- " %-12s%-8s " "$enc" "$strength")"
+     if "$NIST" && [[ $COLOR -ge 3 ]]; then
+          len=${#enc}
+          if [[ ! "$enc" =~ 3DES ]] && [[ ! "$enc" =~ AES ]]; then
+               pr_svrty_critical " $enc"
+          elif [[ "$enc" == AESGCM ]] || [[ "$enc" == AESCCM ]]; then
+               pr_svrty_best " $enc"
+          elif [[ "$enc" == AESCCM8 ]]; then
+               pr_svrty_good " $enc"
+          elif [[ "$enc" =~ 3DES ]]; then
+               pr_svrty_high " $enc"
+          else
+               out " $enc"
+          fi
+          print_n_spaces "$((12-len))"
+          len=${#strength}
+          if [[ "$strength" =~ export ]] || [[ "$strength" =~ None ]] || [[ $strength -lt 112 ]]; then
+               pr_svrty_critical "$strength "
+          else
+               out "$strength "
+          fi
+          print_n_spaces "$((8-len))"
+     else
+          out "$(printf -- " %-12s%-8s " "$enc" "$strength")"
+     fi
      if [[ "$COLOR" -le 2 ]]; then
           if [[ "$DISPLAY_CIPHERNAMES" == rfc ]]; then
                out "$(printf -- "%-33s${SHOW_EACH_C:+  %-0s}" "$ossl_cipher")"
@@ -5249,7 +5303,19 @@ run_client_simulation() {
                               cipher="$(openssl2rfc "$cipher")"
                               [[ -z "$cipher" ]] && cipher=$(get_cipher $TMPFILE)
                          fi
-                         out "$proto   "
+                         if ! "$NIST" || [[ $COLOR -le 2 ]]; then
+                              out "$proto   "
+                         elif [[ "$proto" == TLSv1.3 ]] || ( [[ "$proto" == TLSv1.2 ]] && [[ "${highest_protocol[i]}" == 0x0303 ]] ); then
+                              pr_svrty_best "$proto   "
+                         elif [[ "$proto" == TLSv1.2 ]]; then
+                              pr_svrty_good "$proto   "
+                         elif [[ "$proto" == TLSv1.1 ]] && [[ "${highest_protocol[i]}" == 0x0302 ]]; then
+                              pr_svrty_low "$proto   "
+                         elif [[ "$proto" == TLSv1.0 ]] && [[ "${highest_protocol[i]}" == 0x0301 ]]; then
+                              pr_svrty_high "$proto   "
+                         else
+                              pr_svrty_critical "$proto   "
+                         fi
                          if [[ "$COLOR" -le 2 ]]; then
                               out "$cipher"
                          else
@@ -5563,8 +5629,13 @@ run_protocols() {
           ret_val_ssl3=$?
      fi
      case $ret_val_ssl3 in
-          0)   prln_svrty_high "offered (NOT ok)"
-               fileout "$jsonID" "HIGH" "offered"
+          0)   if "$NIST"; then
+                    prln_svrty_critical "offered (NOT ok)"
+                    fileout "$jsonID" "CRITICAL" "offered"
+               else
+                    prln_svrty_high "offered (NOT ok)"
+                    fileout "$jsonID" "HIGH" "offered"
+               fi
                if "$using_sockets" || "$HAS_SSL3"; then
                     latest_supported="0300"
                     latest_supported_string="SSLv3"
@@ -5633,8 +5704,14 @@ run_protocols() {
           ret_val_tls1=$?
      fi
      case $ret_val_tls1 in
-          0)   pr_svrty_low "offered" ; outln " (deprecated)"
-               fileout "$jsonID" "LOW" "offered (deprecated)"
+          0)   if "$NIST"; then
+                    pr_svrty_high "offered"
+                    prln_warning " -- only servers that support citizen or business-facing applications may support TLSv1.0"
+                    fileout "$jsonID" "HIGH" "offered -- only servers that support citizen or business-facing applications may support TLSv1.0"
+               else
+                    pr_svrty_low "offered" ; outln " (deprecated)"
+                    fileout "$jsonID" "LOW" "offered (deprecated)"
+               fi
                if "$using_sockets" || "$HAS_TLS1"; then
                     latest_supported="0301"
                     latest_supported_string="TLSv1.0"
@@ -5642,22 +5719,38 @@ run_protocols() {
                add_proto_offered tls1 yes
                set_grade_cap "B" "TLS 1.0 offered"
                ;;                                                # nothing wrong with it -- per se
-          1)   out "not offered"
+          1)   if "$NIST"; then
+                    pr_svrty_best "not offered (OK)"
+               else
+                    out "not offered"
+               fi
                add_proto_offered tls1 no
                if [[ -z $latest_supported ]]; then
                     outln
-                    fileout "$jsonID" "INFO" "not offered"       # neither good nor bad
+                    if  "$NIST"; then
+                         fileout "$jsonID" "OK" "not offered"
+                    else
+                         fileout "$jsonID" "INFO" "not offered"       # neither good nor bad
+                    fi
                else
                     prln_svrty_critical " -- connection failed rather than downgrading to $latest_supported_string (NOT ok)"
                     fileout "$jsonID" "CRITICAL" "connection failed rather than downgrading to $latest_supported_string"
                fi
                ;;
-          2)   pr_svrty_medium "not offered"
+          2)   if "$NIST"; then
+                    pr_svrty_critical "not offered and downgraded to a weaker protocol"
+               else
+                    pr_svrty_medium "not offered"
+               fi
                add_proto_offered tls1 no
                if [[ "$DETECTED_TLS_VERSION" == 0300 ]]; then
                     [[ $DEBUG -ge 1 ]] && tm_out " -- downgraded"
                     outln
-                    fileout "$jsonID" "MEDIUM" "not offered, and downgraded to SSL"
+                    if "$NIST"; then
+                         fileout "$jsonID" "CRITICAL" "not offered, and downgraded to SSL"
+                    else
+                         fileout "$jsonID" "MEDIUM" "not offered, and downgraded to SSL"
+                    fi
                elif [[ "$DETECTED_TLS_VERSION" == 03* ]]; then
                     detected_version_string="TLSv1.$((0x$DETECTED_TLS_VERSION-0x0301))"
                     prln_svrty_critical " -- server responded with higher version number ($detected_version_string) than requested by client (NOT ok)"
@@ -5734,7 +5827,11 @@ run_protocols() {
                     fileout "$jsonID" "CRITICAL" "connection failed rather than downgrading to $latest_supported_string"
                fi
                ;;
-          2)   out "not offered"
+          2)   if "$NIST"; then
+                    pr_svrty_critical "not offered and downgraded to a weaker protocol"
+               else
+                    out "not offered"
+               fi
                add_proto_offered tls1_1 no
                if [[ "$DETECTED_TLS_VERSION" == "$latest_supported" ]]; then
                     [[ $DEBUG -ge 1 ]] && tm_out " -- downgraded"
@@ -5859,7 +5956,11 @@ run_protocols() {
                ;;
           2)   add_proto_offered tls1_2 no
                set_grade_cap "C" "TLS 1.2 is not offered"
-               pr_svrty_medium "not offered and downgraded to a weaker protocol"
+               if "$NIST"; then
+                    pr_svrty_critical "not offered and downgraded to a weaker protocol"
+               else
+                    pr_svrty_medium "not offered and downgraded to a weaker protocol"
+               fi
                if [[ "$tls12_detected_version" == 0300 ]]; then
                     detected_version_string="SSLv3"
                elif [[ "$tls12_detected_version" == 03* ]]; then
@@ -5867,7 +5968,11 @@ run_protocols() {
                fi
                if [[ "$tls12_detected_version" == "$latest_supported" ]]; then
                     outln
-                    fileout "$jsonID" "MEDIUM" "not offered and downgraded to a weaker protocol"
+                    if "$NIST"; then
+                         fileout "$jsonID" "CRITICAL" "not offered and downgraded to a weaker protocol"
+                    else
+                         fileout "$jsonID" "MEDIUM" "not offered and downgraded to a weaker protocol"
+                    fi
                elif [[ "$tls12_detected_version" == 03* ]] && [[ 0x$tls12_detected_version -lt 0x$latest_supported ]]; then
                     prln_svrty_critical " -- server supports $latest_supported_string, but downgraded to $detected_version_string"
                     fileout "$jsonID" "CRITICAL" "not offered, and downgraded to $detected_version_string rather than $latest_supported_string"
@@ -6296,7 +6401,9 @@ run_cipherlists() {
      local ossl_low_ciphers low_ciphers sslv2_low_ciphers
      local ossl_tdes_ciphers tdes_ciphers sslv2_tdes_ciphers
      local ossl_obsoleted_ciphers obsoleted_ciphers
-     local strong_ciphers
+     local bad128_ciphers sslv2_bad128_ciphers bad256_ciphers rsa_kx_ciphers high_ciphers
+     local ossl_bad128_ciphers ossl_bad256_ciphers ossl_rsa_kx_ciphers ossl_high_ciphers
+     local strong_ciphers strong_ccm8_ciphers ossl_strong_ccm8_ciphers
      local cwe="CWE-327"
      local cwe2="CWE-310"
      local cve=""
@@ -6349,6 +6456,31 @@ run_cipherlists() {
      # grep AEAD etc/cipher-mapping.txt | grep -E 'TLS_ECDHE|TLS_DHE|TLS_PSK_DHE|TLSv1.3'
      strong_ciphers="00,9E, 00,9F, 00,A2, 00,A3, 00,AA, 00,AB, 13,01, 13,02, 13,03, 13,04, 13,05, 16,B7, 16,B8, 16,B9, 16,BA, C0,2B, C0,2C, C0,2F, C0,30, C0,52, C0,53, C0,56, C0,57, C0,5C, C0,5D, C0,60, C0,61, C0,6C, C0,6D, C0,7C, C0,7D, C0,80, C0,81, C0,86, C0,87, C0,8A, C0,8B, C0,90, C0,91, C0,9E, C0,9F, C0,A2, C0,A3, C0,A6, C0,A7, C0,AA, C0,AB, C0,AC, C0,AD, C0,AE, C0,AF, CC,13, CC,14, CC,15, CC,A8, CC,A9, CC,AA, CC,AC, CC,AD, 00,FF"
 
+     if "$NIST"; then
+       # ~ grep -Ew 128 etc/cipher-mapping.txt | grep -Ev "Au=None|AES"
+          bad128_ciphers="c0,76, c0,72, 00,be, 00,bd, 00,bc, 00,bb, 00,9a, 00,99, 00,98, 00,97, 00,45, 00,44, 00,43, 00,42, c0,78, c0,74, 00,ba, 00,96, 00,41, c0,9a, c0,98, c0,96, c0,94, 00,07, 00,21, 00,25, c0,3c, c0,3e, c0,40, c0,42, c0,44, c0,48, c0,4a, c0,4c, c0,4e, c0,50, c0,52, c0,54, c0,56, c0,58, c0,5c, c0,5e, c0,60, c0,62, c0,64, c0,66, c0,68, c0,6a, c0,6c, c0,6e, c0,70, c0,7a, c0,7c, c0,7e, c0,80, c0,82, c0,86, c0,88, c0,8a, c0,8c, c0,8e, c0,90, c0,92, c0,11, c0,07, 00,66, c0,0c, c0,02, 00,05, 00,04, 00,92, 00,8a, 00,20, 00,24, c0,33, 00,8e, c0,1d, c0,1e, c0,1f, 00,ff"
+          sslv2_bad128_ciphers="01,00,80, 03,00,80, 05,00,80"
+          ossl_bad128_ciphers='MEDIUM:CAMELLIA128:ARIA128:!aNULL:!AES:!CHACHA20:!3DES'
+       # ~ grep -Ew 256 etc/cipher-mapping.txt | grep -E "ARIA|Camellia|CECPQ1|ChaCha20|GOST" | grep -v "Au=None"
+          bad256_ciphers="13,03, cc,14, cc,13, cc,15, c0,9b, c0,99, c0,97, c0,95, cc,a9, cc,a8, cc,aa, c0,77, c0,73, 00,c4, 00,c3, 00,c2, 00,c1, 00,88, 00,87, 00,86, 00,85, cc,ae, cc,ad, cc,ac, c0,79, c0,75, cc,ab, 00,c0, 00,84, c0,3d, c0,3f, c0,41, c0,43, c0,45, c0,49, c0,4b, c0,4d, c0,4f, c0,51, c0,53, c0,55, c0,57, c0,59, c0,5d, c0,5f, c0,61, c0,63, c0,65, c0,67, c0,69, c0,6b, c0,6d, c0,6f, c0,71, c0,7b, c0,7d, c0,7f, c0,81, c0,83, c0,87, c0,89, c0,8b, c0,8d, c0,8f, c0,91, c0,93, 00,80, 00,81, ff,00, ff,01, ff,02, ff,03, ff,85, 16,b7, 16,b8, 16,b9, 16,ba, c0,20, c0,21, c0,22, 00,ff"
+          ossl_bad256_ciphers='!aNULL:CAMELLIA256:ARIA256:CHACHA20'
+       # ~ grep -Ew '3DES' etc/cipher-mapping.txt | grep -Ev "Au=None|SRP"
+          tdes_ciphers="c0,12, c0,08, 00,16, 00,13, 00,10, 00,0d, c0,0d, c0,03, 00,0a, 00,93, 00,8b, 00,1f, c0,34, 00,8f, fe,ff, ff,e0, c0,1a, c0,1b, c0,1c, 00,ff"
+          ossl_tdes_ciphers='3DES:!aNULL:!ADH:!SRP'
+       # ~ equivalent to grep -E "Kx=RSA" etc/cipher-mapping.txt | grep AES
+          rsa_kx_ciphers="00,b7, 00,ad, 00,9d, c0,a1, c0,9d, 00,3d, 00,35, 00,95, 00,ac, c0,a0, c0,9c, 00,9c, 00,3c, 00,2f, 00,b6, 00,94, 00,ff"
+          ossl_rsa_kx_ciphers='RSAPSK+AES:kRSA+AES'
+       # ~ equivalent to grep -Ew AES etc/cipher-mapping.txt | grep -Ev "Au=None|Kx=RSA|AESCCM|AESGCM|SRP"
+          high_ciphers="c0,28, c0,24, c0,14, c0,0a, 00,b3, 00,91, 00,af, 00,6b, 00,6a, 00,69, 00,68, 00,39, 00,38, 00,37, 00,36, c0,2a, c0,26, c0,0f, c0,05, c0,38, c0,36, 00,8d, c0,27, c0,23, c0,13, c0,09, 00,67, 00,40, 00,3f, 00,3e, 00,33, 00,32, 00,31, 00,30, c0,29, c0,25, c0,0e, c0,04, c0,37, c0,35, 00,b2, 00,90, 00,ae, 00,8c, 00,a0, 00,a1, 00,a4, 00,a8, 00,a9, c0,2d, c0,2e, c0,31, c0,32, c0,a8, c0,a4, c0,a9, c0,a5, c0,aa, c0,ab, 00,a5, 00,ff"
+          ossl_high_ciphers='!aNULL:AES:!AESGCM:!AESCCM:!AESCCM8:!SRP:!kRSA:!RSAPSK'
+       # equivalent to grep CCM8 etc/cipher-mapping.txt | grep -Ev "Kx=RSA|Kx=PSK|Kx=DHEPSK"
+          strong_ccm8_ciphers="13,05, c0,a2, c0,a3, c0,ae, c0,af, 00,ff"
+          ossl_strong_ccm8_ciphers='AESCCM8:!kRSA:!PSK'
+       # ~ equivalent to grep -Ew 'AESGCM|AESCCM|AESCCM8' etc/cipher-mapping.txt | grep -Ev "Au=None|Kx=RSA|CECPQ1"
+          strong_ciphers="13,02, c0,30, c0,2c, 00,a3, 00,9f, c0,ad, c0,9f, 00,ab, c0,a7, 13,01, 13,04, c0,2f, c0,2b, 00,a2, 00,9e, c0,ac, c0,9e, 00,aa, c0,a6, 00,ff"
+          ossl_strong_ciphers='!aNULL:AESGCM:AESCCM8:AESCCM:!kRSA:!RSAPSK'
+     fi
+
      # argv[1]: non-TLSv1.3 cipher list to test in OpenSSL syntax
      # argv[2]: TLSv1.3 cipher list to test in OpenSSL syntax
      # argv[3]: string on console / HTML or "finding"
@@ -6366,17 +6498,38 @@ run_cipherlists() {
      ret=$((ret + $?))
      sub_cipherlists "$ossl_exp_ciphers"       "" " Export ciphers (w/o ADH+NULL)                   "     1 "EXPORT"    "$exp_ciphers"     "$sslv2_exp_ciphers"    "$using_sockets" "$cve" "$cwe"
      ret=$((ret + $?))
-     sub_cipherlists "$ossl_low_ciphers"       "" " LOW: 64 Bit + DES, RC[2,4], MD5 (w/o export)    "     2 "LOW"       "$low_ciphers"     "$sslv2_low_ciphers"    "$using_sockets" "$cve" "$cwe"
-     ret=$((ret + $?))
-     sub_cipherlists "$ossl_tdes_ciphers"      "" " Triple DES Ciphers / IDEA                       "     3 "3DES_IDEA" "$tdes_ciphers"    "$sslv2_tdes_ciphers"   "$using_sockets" "$cve" "$cwe2"
-     ret=$((ret + $?))
-     sub_cipherlists "$ossl_obsoleted_ciphers" "" " Obsoleted CBC ciphers (AES, ARIA etc.)          "     4 "OBSOLETED"   "$obsoleted_ciphers"  ""                   "$using_sockets" "$cve" "$cwe2"
-     ret=$((ret + $?))
-     sub_cipherlists "$ossl_good_ciphers"      "" " Strong encryption (AEAD ciphers) with no FS     "     6 "STRONG_NOFS"      "$good_ciphers"     ""                     "$using_sockets" ""      ""
-     ret=$((ret + $?))
-     sub_cipherlists "$ossl_strong_ciphers" 'ALL' " Forward Secrecy strong encryption (AEAD ciphers)"    7 "STRONG_FS"     "$strong_ciphers"   ""                     "$using_sockets" ""      ""
-     ret=$((ret + $?))
-
+     if "$NIST"; then
+          sub_cipherlists "$ossl_low_ciphers"    "" " LOW: 64 Bit + DES, RC[2,4], MD5 (w/o export)    "     1 "LOW"       "$low_ciphers"     "$sslv2_low_ciphers"    "$using_sockets" "$cve" "$cwe"
+          ret=$((ret + $?))
+          sub_cipherlists "$ossl_bad128_ciphers" "" " Unapproved 128-bit ciphers                      "   1 "Bad128Bit"  "$bad128_ciphers" "$sslv2_bad128_ciphers" "$using_sockets" "$cve" "$cwe2"
+          ret=$((ret + $?))
+          sub_cipherlists "$ossl_bad256_ciphers" "TLS_CHACHA20_POLY1305_SHA256" \
+                                                             " Unapproved 256-bit ciphers                      "     1 "Bad256Bit"  "$bad256_ciphers" "" "$using_sockets" "$cve" "$cwe2"
+          ret=$((ret + $?))
+          sub_cipherlists "$ossl_tdes_ciphers" "" " Triple DES Ciphers                              "     2 "3DES"       "$tdes_ciphers"   "$sslv2_tdes_ciphers" "$using_sockets" "$cve" "$cwe2"
+          ret=$((ret + $?))
+          sub_cipherlists "$ossl_rsa_kx_ciphers" "" " RSA key transport ciphers (w/ AES)              "   4 "RSAtrans"   "$rsa_kx_ciphers" "" "$using_sockets" "$cve" "$cwe2"
+          ret=$((ret + $?))
+          sub_cipherlists "$ossl_high_ciphers" "" " High encryption (AES, no AEAD)                  "     5 "HIGH"       "$high_ciphers"    "" "$using_sockets"
+          ret=$((ret + $?))
+          sub_cipherlists "$ossl_strong_ccm8_ciphers" "TLS_AES_128_CCM_8_SHA256" \
+                                                             " Strong encryption (AES, CCM8 ciphers)           "     6 "STRONG_CCM8"     "$strong_ccm8_ciphers"  "" "$using_sockets"
+          ret=$((ret + $?))
+          sub_cipherlists "$ossl_strong_ciphers" "TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256:TLS_AES_128_CCM_SHA256" \
+                                                             " Strong encryption (AES, AEAD ciphers)           "     7 "STRONG"     "$strong_ciphers"  "" "$using_sockets"
+          ret=$((ret + $?))
+     else
+          sub_cipherlists "$ossl_low_ciphers"       "" " LOW: 64 Bit + DES, RC[2,4], MD5 (w/o export)    "     2 "LOW"       "$low_ciphers"     "$sslv2_low_ciphers"    "$using_sockets" "$cve" "$cwe"
+          ret=$((ret + $?))
+          sub_cipherlists "$ossl_tdes_ciphers"      "" " Triple DES Ciphers / IDEA                       "     3 "3DES_IDEA" "$tdes_ciphers"    "$sslv2_tdes_ciphers"   "$using_sockets" "$cve" "$cwe2"
+          ret=$((ret + $?))
+          sub_cipherlists "$ossl_obsoleted_ciphers" "" " Obsoleted CBC ciphers (AES, ARIA etc.)          "     4 "OBSOLETED"   "$obsoleted_ciphers"  ""                   "$using_sockets" "$cve" "$cwe2"
+          ret=$((ret + $?))
+          sub_cipherlists "$ossl_good_ciphers"      "" " Strong encryption (AEAD ciphers) with no FS     "     6 "STRONG_NOFS"      "$good_ciphers"     ""                     "$using_sockets" ""      ""
+          ret=$((ret + $?))
+          sub_cipherlists "$ossl_strong_ciphers" 'ALL' " Forward Secrecy strong encryption (AEAD ciphers)"    7 "STRONG_FS"     "$strong_ciphers"   ""                     "$using_sockets" ""      ""
+          ret=$((ret + $?))
+     fi
      outln
      return $ret
 }
@@ -6401,7 +6554,18 @@ pr_dh_quality() {
      local bits="$1"
      local string="$2"
 
-     if [[ "$bits" -le 600 ]]; then
+     if "$NIST"; then
+          if [[ "$bits" -lt 2048 ]]; then
+               pr_svrty_critical "$string"
+               return 1
+          elif [[ "$bits" -lt 3072 ]]; then
+               out "$string"
+               return 5
+          else
+               pr_svrty_good "$string"
+               return 6
+         fi
+     elif [[ "$bits" -le 600 ]]; then
           pr_svrty_critical "$string"
           return 1
      elif [[ "$bits" -le 800 ]]; then
@@ -6436,7 +6600,15 @@ pr_ecdh_quality() {
      local bits="$1"
      local string="$2"
 
-     if [[ "$bits" -le 80 ]]; then      # has that ever existed?
+     if "$NIST"; then
+          if [[ "$bits" -lt 224 ]]; then
+               pr_svrty_critical "$string"
+          elif [[ "$bits" -lt 256 ]]; then
+               out "$string"
+          else
+               pr_svrty_good "$string"
+          fi
+     elif [[ "$bits" -le 80 ]]; then      # has that ever existed?
           pr_svrty_critical "$string"
      elif [[ "$bits" -le 108 ]]; then   # has that ever existed?
           pr_svrty_high "$string"
@@ -6489,7 +6661,24 @@ pr_ecdh_curve_quality() {
           "X25519") bits=253  ;;
           "X448") bits=448  ;;
      esac
-     pr_ecdh_quality "$bits" "$curve"
+     if "$NIST"; then
+          # Best is if curve is one of the approved curves from SP 800-56A
+          # Rev. 3 Appendix D that is at least 256 bits.
+          # If not, then the curve should be at least 224 bits.
+          if [[ " $SP800_56A_CURVES " =~ \ $curve\  ]]; then
+               if [[ "$bits" -lt 256 ]]; then
+                    out "$curve"
+               else
+                    pr_svrty_good "$curve"
+               fi
+          elif [[ "$bits" -ge 224 ]]; then
+               pr_svrty_low "$curve"
+          else
+               pr_svrty_critical "$curve"
+          fi
+     else
+          pr_ecdh_quality "$bits" "$curve"
+     fi
 }
 
 # Return a value that is an indicator of the quality of the cipher in $1:
@@ -6514,41 +6703,69 @@ get_cipher_quality() {
           if [[ $TLS_NR_CIPHERS -eq 0 ]]; then
                # We have an OpenSSL name and can't convert it to the RFC name which is rarely
                # the case, see "prepare_arrays()" and "./etc/cipher-mapping.txt"
-               case "$cipher" in
-                    *NULL*|EXP*|ADH*|AECDH*|*anon*)
+               if "$NIST"; then
+                    if [[ " $SP800_52R2_OSSL_CIPHERS_MAY_SUPPORT " =~ \ $cipher\  ]]; then
+                         if [[ "$cipher" == AES* ]]; then
+                              # These are cipher suites that use RSA key transport.
+                              # See SP 800-52 Rev. 2, Appendix D.
+                              return 4
+                         elif ( [[ "$cipher" =~ GCM ]] || [[ "$cipher" =~ CCM ]] ) && \
+                            ( [[ "$cipher" =~ TLS13 ]] || [[ "$cipher" =~ DHE- ]] || [[ "$cipher" =~ ECDHE- ]] ); then
+                              if [[ "$cipher" =~ CCM8 ]]; then
+                                   return 6
+                              else
+                                   return 7
+                              fi
+                         else
+                              return 5
+                         fi
+                    elif [[ " $SP800_52R1_OSSL_CIPHERS_SHALL_MAY_SUPPORT " =~ \ $cipher\  ]]; then
+                         if [[ "$cipher" =~ DES ]]; then
+                              # See https://cyber.dhs.gov/bod/18-01/
+                              return 2
+                         else
+                              return 3
+                         fi
+                    else
                          return 1
-                         ;;
-                    *RC4*|*RC2*|*MD5|*M1)
-                         return 2
-                         ;;
-                    AES256-GCM-SHA384|AES128-GCM-SHA256|AES256-CCM*|AES128-CCM*|ARIA256-GCM-SHA384|ARIA128-GCM-SHA256)
-                         # RSA kx and e.g. GCM isn't certainly the best
-                         return 6
-                         ;;
-                    *CBC3*|*3DES*|*IDEA*)
-                         return 3
-                         ;;
-                    *DES*)
-                         return 2
-                         ;;
-                    PSK-*GCM*|PSK-*CCM*|RSA-PSK-*GCM*|RSA-PSK-CHACHA20-POLY1305|PSK-CHACHA20-POLY1305)
-                         # PSK kx and e.g. GCM isn't certainly the best
-                         return 6
-                         ;;
-                    DH-*GCM*|ECDH-*GCM*)
-                         # static DH or ECDH kx and GCM isn't certainly the best
-                         return 6
-                         ;;
-                    *GCM*|*CCM*|*CHACHA20*)
-                         return 7
-                         ;; #best ones
-                    *AES*SHA*|*CAMELLIA*SHA*|*SEED*SHA*|*CBC*|*GOST*)
-                         return 4
-                         ;;
-                    *)
-                         return 5
-                         ;;
-               esac
+                    fi
+               else
+                    case "$cipher" in
+                         *NULL*|EXP*|ADH*|AECDH*|*anon*)
+                              return 1
+                              ;;
+                         *RC4*|*RC2*|*MD5|*M1)
+                              return 2
+                              ;;
+                         AES256-GCM-SHA384|AES128-GCM-SHA256|AES256-CCM*|AES128-CCM*|ARIA256-GCM-SHA384|ARIA128-GCM-SHA256)
+                              # RSA kx and e.g. GCM isn't certainly the best
+                              return 6
+                              ;;
+                         *CBC3*|*3DES*|*IDEA*)
+                              return 3
+                              ;;
+                         *DES*)
+                              return 2
+                              ;;
+                         PSK-*GCM*|PSK-*CCM*|RSA-PSK-*GCM*|RSA-PSK-CHACHA20-POLY1305|PSK-CHACHA20-POLY1305)
+                              # PSK kx and e.g. GCM isn't certainly the best
+                              return 6
+                              ;;
+                         DH-*GCM*|ECDH-*GCM*)
+                              # static DH or ECDH kx and GCM isn't certainly the best
+                              return 6
+                              ;;
+                         *GCM*|*CCM*|*CHACHA20*)
+                              return 7
+                              ;; #best ones
+                         *AES*SHA*|*CAMELLIA*SHA*|*SEED*SHA*|*CBC*|*GOST*)
+                              return 4
+                              ;;
+                         *)
+                              return 5
+                              ;;
+                    esac
+               fi
           fi
           ossl_cipher="$cipher"
           cipher="$(openssl2rfc "$cipher")"
@@ -6556,36 +6773,64 @@ get_cipher_quality() {
      fi
 
      # Now we look at the RFC cipher names. The sequence matters - as above.
-     case "$cipher" in
-          *NULL*|*EXP*|*_DES40_*|*anon*)
-               return 1
-               ;;
-          *RC4*|*RC2*|*MD5|*MD5_1)
-               return 2
-               ;;
-          *_DES_*)
-               if [[ "$cipher" =~ EDE3 ]]; then
+     if "$NIST"; then
+          if [[ " $SP800_52R2_RFC_CIPHERS_MAY_SUPPORT " =~ \ $cipher\  ]]; then
+               if [[ "$cipher" == TLS_RSA_WITH* ]]; then
+                    # These are cipher suites that use RSA key transport.
+                    # See SP 800-52 Rev. 2, Appendix D.
+                    return 4
+               elif ( [[ "$cipher" =~ GCM ]] || [[ "$cipher" =~ CCM ]] ) && \
+                  ( [[ ! "$cipher" =~ _WITH_ ]] || [[ "$cipher" == TLS_DHE* ]] || [[ "$cipher" == TLS_ECDHE* ]] ); then
+                    if [[ "$cipher" =~ CCM_8 ]]; then
+                         return 6
+                    else
+                         return 7
+                    fi
+               else
+                    return 5
+               fi
+          elif [[ " $SP800_52R1_RFC_CIPHERS_SHALL_MAY_SUPPORT " =~ \ $cipher\  ]]; then
+               if [[ "$cipher" =~ DES ]]; then
+                    # See https://cyber.dhs.gov/bod/18-01/
+                    return 2
+               else
                     return 3
                fi
-               return 2
-               ;;
-          *CBC3*|*3DES*|*IDEA*)
-               return 3
-               ;;
-          *CBC*|*GOST*)
-               return 4
-               ;;
-          TLS_RSA_*|TLS_DH_*|TLS_ECDH_*|TLS_PSK_WITH_*)
-               # RSA, or static DH, ECDH, or PSK kx and e.g. GCM isn't certainly the best
-               return 6
-               ;;
-          *GCM*|*CCM*|*CHACHA20*)
-               return 7
-               ;;
-          *)
-               return 5
-               ;;
-     esac
+          else
+               return 1
+          fi
+     else
+          case "$cipher" in
+               *NULL*|*EXP*|*_DES40_*|*anon*)
+                    return 1
+                    ;;
+               *RC4*|*RC2*|*MD5|*MD5_1)
+                    return 2
+                    ;;
+               *_DES_*)
+                    if [[ "$cipher" =~ EDE3 ]]; then
+                         return 3
+                    fi
+                    return 2
+                    ;;
+               *CBC3*|*3DES*|*IDEA*)
+                    return 3
+                    ;;
+               *CBC*|*GOST*)
+                    return 4
+                    ;;
+               TLS_RSA_*|TLS_DH_*|TLS_ECDH_*|TLS_PSK_WITH_*)
+                    # RSA, or static DH, ECDH, or PSK kx and e.g. GCM isn't certainly the best
+                    return 6
+                    ;;
+               *GCM*|*CCM*|*CHACHA20*)
+                    return 7
+                    ;;
+               *)
+                    return 5
+                    ;;
+          esac
+     fi
 }
 
 # Output the severity level associated with the cipher in $1.
@@ -7533,8 +7778,15 @@ cipher_pref_check() {
           fi
      fi
      if "$prioritize_chacha"; then
-          outln " (server order -- server prioritizes ChaCha ciphers when preferred by clients)"
-          fileout "cipher_order-${proto}" "OK" "server -- server prioritizes ChaCha ciphers when preferred by clients"
+          if "$NIST"; then
+               out " (server order -- "
+               pr_svrty_critical "server prioritizes ChaCha ciphers when preferred by clients"
+               outln ")"
+               fileout "cipher_order-${proto}" "CRITICAL" "server -- server prioritizes ChaCha ciphers when preferred by clients"
+          else
+               outln " (server order -- server prioritizes ChaCha ciphers when preferred by clients)"
+               fileout "cipher_order-${proto}" "OK" "server -- server prioritizes ChaCha ciphers when preferred by clients"
+          fi
      elif [[ -n "$order" ]]; then
           outln " (server order)"
           fileout "cipher_order-${proto}" "OK" "server"
@@ -7552,7 +7804,19 @@ cipher_pref_check() {
                done
           else
                outln
-               out "$(printf "    %-10s " "$proto_text: ")"
+               if "$NIST" && [[ $COLOR -ge 3 ]]; then
+                    if [[ "$proto_text" =~ SSL ]]; then
+                         pr_svrty_critical "     $proto_text" ; out ":    "
+                    elif [[ "$proto_text" == TLSv1 ]]; then
+                         pr_svrty_high "     $proto_text" ; out ":    "
+                    elif [[ "$proto_text" == TLSv1.1 ]]; then
+                         pr_svrty_low "     $proto_text" ; out ":    "
+                    else
+                         out "$(printf "     %-10s" "$proto_text:")"
+                    fi
+               else
+                    out "$(printf "     %-10s" "$proto_text:")"
+               fi
                if [[ "$COLOR" -le 2 ]]; then
                     out "$(out_row_aligned_max_width "$order" "               " $TERM_WIDTH)"
                else
@@ -7560,7 +7824,13 @@ cipher_pref_check() {
                fi
           fi
           fileout "cipherorder_${proto_text//./_}" "INFO" "$order"
-          [[ -n "$first_cipher" ]] && [[ -n "$first_chacha_cipher" ]] && fileout "prioritize_chacha_${proto_text//./_}" "INFO" "$prioritize_chacha"
+          if [[ -n "$first_cipher" ]] && [[ -n "$first_chacha_cipher" ]]; then
+               if "$NIST" && "$prioritize_chacha"; then
+                    fileout "prioritize_chacha_${proto_text//./_}" "CRITICAL" "$prioritize_chacha"
+               else
+                    fileout "prioritize_chacha_${proto_text//./_}" "INFO" "$prioritize_chacha"
+               fi
+          fi
      else
           # Order doesn't contain any ciphers, so we can safely unset the protocol and put a dash out
           add_proto_offered "$proto" no
@@ -8920,7 +9190,7 @@ certificate_info() {
      local sni_used="${11}"
      local ct="${12}"
      local certificate_list_ordering_problem="${13}"
-     local cert_sig_algo cert_sig_hash_algo cert_key_algo cert_spki_info
+     local cert_version cert_sig_algo cert_sig_hash_algo cert_key_algo cert_spki_info
      local hostcert=""
      local common_primes_file="$TESTSSL_INSTALL_DIR/etc/common-primes.txt"
      local -i lineno_matched=0
@@ -8989,12 +9259,17 @@ certificate_info() {
      jsonID="cert_signatureAlgorithm"
      case $cert_sig_algo in
           sha1WithRSA|sha1WithRSAEncryption)
-               pr_svrty_medium "SHA1 with RSA"
+               if "$NIST"; then
+                    pr_svrty_critical "SHA1 with RSA"
+                    fileout "${jsonID}${json_postfix}" "CRITICAL" "SHA1 with RSA"
+               else
+                    pr_svrty_medium "SHA1 with RSA"
+                    fileout "${jsonID}${json_postfix}" "MEDIUM" "SHA1 with RSA"
+               fi
                if [[ "$SERVICE" == HTTP ]] || "$ASSUME_HTTP"; then
                     out " -- besides: users will receive a "; pr_svrty_high "strong browser WARNING"
                fi
                outln
-               fileout "${jsonID}${json_postfix}" "MEDIUM" "SHA1 with RSA"
                set_grade_cap "T" "Uses SHA1 algorithm"
                ;;
           sha224WithRSAEncryption)
@@ -9014,8 +9289,13 @@ certificate_info() {
                fileout "${jsonID}${json_postfix}" "OK" "SHA512 with RSA"
                ;;
           ecdsa-with-SHA1)
-               prln_svrty_medium "ECDSA with SHA1"
-               fileout "${jsonID}${json_postfix}" "MEDIUM" "ECDSA with SHA1"
+               if "$NIST"; then
+                    prln_svrty_critical "ECDSA with SHA1"
+                    fileout "${jsonID}${json_postfix}" "CRITICAL" "ECDSA with SHA1"
+               else
+                    prln_svrty_medium "ECDSA with SHA1"
+                    fileout "${jsonID}${json_postfix}" "MEDIUM" "ECDSA with SHA1"
+               fi
                set_grade_cap "T" "Uses SHA1 algorithm"
                ;;
           ecdsa-with-SHA224)
@@ -9035,8 +9315,13 @@ certificate_info() {
                fileout "${jsonID}${json_postfix}" "OK" "ECDSA with SHA512"
                ;;
           dsaWithSHA1)
-               prln_svrty_medium "DSA with SHA1"
-               fileout "${jsonID}${json_postfix}" "MEDIUM" "DSA with SHA1"
+               if "$NIST"; then
+                    prln_svrty_critical "DSA with SHA1"
+                    fileout "${jsonID}${json_postfix}" "CRITICAL" "DSA with SHA1"
+               else
+                    prln_svrty_medium "DSA with SHA1"
+                    fileout "${jsonID}${json_postfix}" "MEDIUM" "DSA with SHA1"
+               fi
                set_grade_cap "T" "Uses SHA1 algorithm"
                ;;
           dsa_with_SHA224)
@@ -9051,8 +9336,13 @@ certificate_info() {
                cert_sig_hash_algo="$(awk '/Signature Algorithm/ { getline; print $0; exit }' <<< "$cert_txt" | sed 's/^.*Hash Algorithm: //')"
                case $cert_sig_hash_algo in
                     sha1)
-                         prln_svrty_medium "RSASSA-PSS with SHA1"
-                         fileout "${jsonID}${json_postfix}" "MEDIUM" "RSASSA-PSS with SHA1"
+                         if "$NIST"; then
+                              prln_svrty_critical "RSASSA-PSS with SHA1"
+                              fileout "${jsonID}${json_postfix}" "CRITICAL" "RSASSA-PSS with SHA1"
+                         else
+                              prln_svrty_medium "RSASSA-PSS with SHA1"
+                              fileout "${jsonID}${json_postfix}" "MEDIUM" "RSASSA-PSS with SHA1"
+                         fi
                          set_grade_cap "T" "Uses SHA1 algorithm"
                          ;;
                     sha224)
@@ -9127,7 +9417,24 @@ certificate_info() {
           # https://doi.org/10.1007/s00145-001-0009-4
           # see https://csrc.nist.gov/publications/detail/sp/800-57-part-1/rev-4/final
           # Table 2 @ chapter 5.6.1 (~ p66)
-          if [[ $cert_key_algo =~ ecdsa ]] || [[ $cert_key_algo =~ ecPublicKey ]]; then
+          if "$NIST" && ( [[ $cert_key_algo =~ ecdsa ]] || [[ $cert_key_algo =~ ecPublicKey ]] ); then
+               if [[ "$cert_keysize" -lt 224 ]]; then
+                    pr_svrty_critical "$cert_keysize"
+                    json_rating="CRITICAL"; json_msg="$short_keyAlgo $cert_keysize bits"
+               elif [[ "$cert_keysize" -lt 256 ]]; then
+                    out "$cert_keysize"
+                    json_rating="INFO"; json_msg="$short_keyAlgo $cert_keysize bits"
+               elif [[ "$cert_keysize" -le 533 ]]; then
+                    pr_svrty_good "$cert_keysize"
+                    json_rating="OK"; json_msg="$short_keyAlgo $cert_keysize bits"
+               else
+                    out "keysize: $cert_keysize (not expected, FIXME)"
+                    json_rating="DEBUG"; json_msg=" $cert_keysize bits (not expected)"
+               fi
+               out " bits"
+
+               set_key_str_score "$short_keyAlgo" "$cert_keysize"
+          elif [[ $cert_key_algo =~ ecdsa ]] || [[ $cert_key_algo =~ ecPublicKey ]]; then
                if [[ "$cert_keysize" -le 110 ]]; then       # a guess
                     pr_svrty_critical "$cert_keysize"
                     json_rating="CRITICAL"; json_msg="$short_keyAlgo $cert_keysize bits"
@@ -9149,6 +9456,28 @@ certificate_info() {
                     ((ret++))
                fi
                out " bits"
+
+               set_key_str_score "$short_keyAlgo" "$cert_keysize"
+          elif "$NIST" && ( [[ $cert_key_algo =~ RSA ]] || [[ $cert_key_algo =~ rsa ]] || [[ $cert_key_algo =~ dsa ]] || \
+                              [[ $cert_key_algo =~ dhKeyAgreement ]] || [[ $cert_key_algo == X9.42\ DH ]] ); then
+               if [[ "$cert_keysize" -lt 2048 ]]; then
+                    pr_svrty_critical "$cert_keysize"
+                    out " bits"
+                    json_rating="CRITICAL"; json_msg="$short_keyAlgo $cert_keysize bits"
+               elif [[ "$cert_keysize" -lt 3072 ]]; then
+                    out "$cert_keysize bits"
+                    json_rating="INFO"; json_msg="$short_keyAlgo $cert_keysize bits"
+               elif [[ "$cert_keysize" -le 4096 ]]; then
+                    pr_svrty_good "$cert_keysize"
+                    out " bits"
+                    json_rating="OK"; json_msg="$short_keyAlgo $cert_keysize bits"
+               else
+                    pr_warning "weird key size: $cert_keysize bits"; outln " (could cause compatibility problems)"
+                    json_rating="WARN"; json_msg="$cert_keysize bits (Odd)"
+               fi
+               if [[ "$cert_keysize" -le 4096 ]] && [[ $cert_keysize%1024 -ne 0 ]]; then
+                    pr_magenta" -- weird key size (not a multiple of 1024)"
+               fi
 
                set_key_str_score "$short_keyAlgo" "$cert_keysize"
           elif [[ $cert_key_algo =~ RSA ]] || [[ $cert_key_algo =~ rsa ]] || [[ $cert_key_algo =~ dsa ]] || \
@@ -9199,10 +9528,11 @@ certificate_info() {
                  cert_spki_info="$(strip_leading_space "$cert_spki_info")"
                  cert_spki_info="${cert_spki_info%%[[:space:]]*}"
                  if [[ -n "$cert_spki_info" ]]; then
-                      if [[ $cert_spki_info -eq 1 ]]; then
+                      if [[ $cert_spki_info -eq 1 ]] || \
+                           ( "$NIST" && [[ $cert_spki_info -lt 65537 ]] ); then
                            out " (exponent is "; pr_svrty_critical "$cert_spki_info"; out ")"
                            json_rating="CRITICAL"
-                           set_grade_cap "F" "RSA certificate uses exponent of 1"
+                           [[ $cert_spki_info -eq 1 ]] && set_grade_cap "F" "RSA certificate uses exponent of 1"
                       else
                            out " (exponent is $cert_spki_info)"
                       fi
@@ -9218,6 +9548,11 @@ certificate_info() {
                  if [[ -n "$cert_spki_info" ]]; then
                       out " (curve $cert_spki_info)"
                       json_msg+=" (curve $cert_spki_info)"
+                      if "$NIST" && [[ "$cert_spki_info" != P-256 ]] && [[ "$cert_spki_info" != P-384 ]]; then
+                           pr_svrty_low " -- should be P-256 or P-384"
+                           json_msg+=" -- should be P-256 or P-384"
+                           ( [[ "$json_rating" == INFO ]] || [[ "$json_rating" == OK ]] ) && json_rating="LOW"
+                      fi
                  fi
                  ;;
           "DH")  if [[ -s "$common_primes_file" ]]; then
@@ -9230,8 +9565,19 @@ certificate_info() {
                       lineno_matched=$(grep -n "$cert_spki_info" "$common_primes_file" 2>/dev/null | awk -F':' '{ print $1 }')
                       if [[ "$lineno_matched" -ne 0 ]]; then
                            cert_spki_info="$(awk "NR == $lineno_matched-1" "$common_primes_file" | awk -F'"' '{ print $2 }')"
-                           out " ($cert_spki_info)"
-                           json_msg+=" ($cert_spki_info)"
+                           if "$NIST" &&  ( [[ "$cert_spki_info" =~ Oakley\ Group\ 5 ]] ||
+                                ( [[ ! "$cert_spki_info" =~ ffdhe ]] && [[ ! "$cert_spki_info" =~ 3526 ]] ) ); then
+                                out " ("; pr_svrty_medium "$cert_spki_info"; out ") -- should use primes from RFC 7919 or RFC 3526"
+                                json_msg+=" ($cert_spki_info) -- should use primes from RFC 7919 or RFC 3526"
+                                [[ "$json_rating" != CRITICAL ]] && [[ "$json_rating" != HIGH ]] && json_rating="MEDIUM"
+                           else
+                                out " ($cert_spki_info)"
+                                json_msg+=" ($cert_spki_info)"
+                           fi
+                      elif "$NIST"; then
+                           pr_svrty_medium " (should use primes from RFC 7919 or RFC 3526)"
+                           json_msg+="  (should use primes from RFC 7919 or RFC 3526)"
+                           [[ "$json_rating" != CRITICAL ]] && [[ "$json_rating" != HIGH ]] && json_rating=MEDIUM
                       fi
                  fi
                  ;;
@@ -9281,6 +9627,9 @@ certificate_info() {
                prln_svrty_high "$indent                              Certificate incorrectly used for TLS Web Server Authentication"
                fileout "${jsonID}${json_postfix}" "HIGH" "Certificate incorrectly used for TLS Web Server Authentication: \"$cert_ext_keyusage\""
                outok=false
+          elif "$NIST" && [[ "$cert_ext_keyusage" =~ Any\ Extended\ Key\ Usage ]]; then
+               prln_svrty_low "$indent                              TLS server certificates should not assert the Any Extended Key Usage key purpose"
+               fileout "${jsonID}${json_postfix}" "LOW" "TLS server certificates should not assert the Any Extended Key Usage key purpose"
           fi
      else
           outln "--"
@@ -9836,6 +10185,18 @@ certificate_info() {
           pr_svrty_low "not offered"
           fileout "${jsonID}${json_postfix}" "LOW" "--"
      fi
+
+     if "$NIST"; then
+          # The version number is always the third line of the output:
+          jsonID="certificate_version"
+          cert_version=$($OPENSSL x509 -in $HOSTCERT -noout -text 2>>$ERRFILE | head -3 | tail -1 | awk '/Version: / { print $2 }')
+          if [[ "$cert_version" != "3" ]]; then
+               pr_svrty_critical "\n$indent                              -- This is an X.509 version $cert_version certificate (needs to be version 3)"
+               fileout "${jsonID}${json_postfix}" "CRITICAL" "$cert_version"
+          else
+               fileout "${jsonID}${json_postfix}" "INFO" "$cert_version"
+          fi
+     fi
      outln
 
      out "$indent"; pr_bold " Certificate Transparency     ";
@@ -9978,7 +10339,7 @@ certificate_info() {
 }
 
 run_server_defaults() {
-     local ciph newhostcert sni
+     local ciph newhostcert sni hostcert_key_usage ec_curve
      local match_found
      local sessticket_lifetime_hint="" sessticket_proto="" lifetime unit
      local -i i n
@@ -9990,6 +10351,9 @@ run_server_defaults() {
      local -a ciphers_to_test certificate_type
      local -a -i success
      local cn_nosni cn_sni sans_nosni sans_sni san tls_extensions client_auth_ca
+     local RSASig_found=false
+     local ECDSASig_found=false
+     local ECDSA_with_P256_or_P384_found=false
      local using_sockets=true
 
      "$SSL_NATIVE" && using_sockets=false
@@ -10114,6 +10478,20 @@ run_server_defaults() {
                               ciphers_to_test[n]="aGOST"
                          fi
                     fi
+
+                    if "$NIST"; then
+                         hostcert_key_usage="$(strip_leading_space "$($OPENSSL x509 -text -noout -in $HOSTCERT | awk '/X509v3 Key Usage:/ { getline; print $0 }')")"
+                         if [[ "${certificate_type[n]}" == RSASig ]] || [[ "${certificate_type[n]}" == RSAKMK ]]; then
+                              ( [[ -z "$hostcert_key_usage" ]] || [[ "$hostcert_key_usage" =~ Digital\ Signature ]] ) && RSASig_found=true
+                         elif [[ "${certificate_type[n]}" == ECDSA ]] || [[ "${certificate_type[n]}" == ECDH ]]; then
+                              if [[ -z "$hostcert_key_usage" ]] || [[ "$hostcert_key_usage" =~ Digital\ Signature ]]; then
+                                   ECDSASig_found=true
+                                   ec_curve=$(grep "ASN1 OID:" <<<"$($OPENSSL x509 -pubkey -noout -in $HOSTCERT | $OPENSSL ec -pubin -text -noout 2>>$ERRFILE | grep "ASN1 OID:")")
+                                   ( [[ "$ec_curve" =~ prime256v1 ]] || [[ "$ec_curve" =~ secp384r1 ]] ) && ECDSA_with_P256_or_P384_found=true
+                              fi
+                         fi
+                    fi
+
                     # check whether the host's certificate has been seen before
                     match_found=false
                     i=1
@@ -10441,6 +10819,15 @@ run_server_defaults() {
                "${previous_ordering_problem[i]}"
                [[ $? -ne 0 ]] && ((ret++))
      done
+
+     if "$NIST"; then
+          if ! $RSASig_found && ! $ECDSASig_found; then
+               prln_svrty_critical " No ECDSA or RSA signature certificate"
+          fi
+          if $ECDSASig_found && ! $ECDSA_with_P256_or_P384_found; then
+               prln_svrty_medium " ECDSA signature certificate does not use curve P-256 or P-384 for the public key"
+          fi
+     fi
      return $ret
 }
 
@@ -10457,7 +10844,7 @@ get_san_dns_from_cert() {
 
 run_fs() {
      local -i sclient_success
-     local fs_offered=false ecdhe_offered=false ffdhe_offered=false
+     local fs_offered=false ecdhe_offered=false ffdhe_offered=false non_sp80056a_offered=false
      local fs_tls13_offered=false fs_tls12_offered=false
      local protos_to_try proto hexc dash fs_cipher sslvers auth mac export curve dhlen
      local -a hexcode normalized_hexcode ciph rfc_ciph kx enc ciphers_found sigalg ossl_supported
@@ -10513,6 +10900,8 @@ run_fs() {
                if [[ "$fs_cipher" == "TLS_DHE_"* || "$fs_cipher" == "TLS_ECDHE_"* || "${hexc:2:2}" == "13" ]] && \
                   [[ ! "$fs_cipher" =~ NULL ]] && [[ ! "$fs_cipher" =~ DES ]] && [[ ! "$fs_cipher" =~ RC4 ]] && \
                   [[ ! "$fs_cipher" =~ PSK ]] && { "$using_sockets" || "${TLS_CIPHER_OSSL_SUPPORTED[i]}"; }; then
+                    "$NIST" && [[ ! " $SP800_52R2_RFC_CIPHERS_MAY_SUPPORT " =~ \ $fs_cipher\  ]] && \
+                         [[ ! " $SP800_52R1_RFC_CIPHERS_SHALL_MAY_SUPPORT " =~ \ $fs_cipher\  ]] && continue
                     fs_hex_cipher_list+=", ${hexc:2:2},${hexc:7:2}"
                     ciph[nr_supported_ciphers]="${TLS_CIPHER_OSSL_NAME[i]}"
                     rfc_ciph[nr_supported_ciphers]="${TLS_CIPHER_RFC_NAME[i]}"
@@ -10533,6 +10922,8 @@ run_fs() {
           done
      else
           while read -r hexc dash ciph[nr_supported_ciphers] sslvers kx[nr_supported_ciphers] auth enc[nr_supported_ciphers] mac export; do
+               "$NIST" && [[ ! " $SP800_52R2_OSSL_CIPHERS_MAY_SUPPORT " =~ \ ${ciph[nr_supported_ciphers]}\  ]] && \
+                    [[ ! " $SP800_52R1_OSSL_CIPHERS_SHALL_MAY_SUPPORT " =~ \ ${ciph[nr_supported_ciphers]}\  ]] && continue
                ciphers_found[nr_supported_ciphers]=false
                if [[ "${hexc:2:2}" == 00 ]]; then
                     normalized_hexcode[nr_supported_ciphers]="x${hexc:7:2}"
@@ -10888,6 +11279,7 @@ run_fs() {
                if "${supported_curve[i]}"; then
                     curves_offered+="${curves_ossl[i]} "
                     [[ ${curves_bits[i]} -lt $low ]] && low=${curves_bits[i]}
+                    "$NIST" && [[ ! " $SP800_56A_CURVES " =~ \ ${curves_ossl[i]}\  ]] && non_sp80056a_offered=true
                fi
           done
           if [[ -n "$curves_offered" ]]; then
@@ -10895,9 +11287,17 @@ run_fs() {
                pr_bold " Elliptic curves offered:     "
                out_row_aligned_max_width_by_entry "$curves_offered" "                              " $TERM_WIDTH pr_ecdh_curve_quality
                outln
+               if "$NIST"; then
+                    if ! "$non_sp80056a_offered"; then
+                         fileout "${jsonID}_ECDHE_curves" "OK" "$curves_offered"
+                    elif [[ "$low" -ge 224 ]]; then
+                         fileout "${jsonID}_ECDHE_curves" "WARN" "$curves_offered"
+                    else
+                         fileout "${jsonID}_ECDHE_curves" "CRITICAL" "$curves_offered"
+                    fi
                # severity ratings based on quality specified by
                # pr_ecdh_quality() for shortest curve offered.
-               if [[ "$low" -le 163 ]]; then
+               elif [[ "$low" -le 163 ]]; then
                     fileout "${jsonID}_ECDHE_curves" "MEDIUM" "$curves_offered"
                elif [[ "$low" -le 193 ]]; then
                     fileout "${jsonID}_ECDHE_curves" "LOW" "$curves_offered"
@@ -10997,26 +11397,44 @@ run_fs() {
                else
                     pr_bold " Finite field group:          "
                fi
-               if [[ "$curves_offered" =~ ffdhe ]]; then
-                    # ok not to display them in italics:
-                    pr_svrty_good "$curves_offered"
-                    quality=6
+               if "$NIST" && ( [[ "$curves_offered" =~ Oakley\ Group\ 5 ]] ||
+                    ( [[ ! "$curves_offered" =~ ffdhe ]] && [[ ! "$curves_offered" =~ 3526 ]] ) ); then
+                    if [[ $len_dh_p -lt 2048 ]]; then
+                         pr_dh "$curves_offered" "$len_dh_p"
+                         pr_svrty_critical " (should use primes from RFC 7919 or RFC 3526)"
+                         quality_str="CRITICAL"
+                    else
+                         pr_dh "$curves_offered" "$len_dh_p"
+                         pr_svrty_medium " (should use primes from RFC 7919 or RFC 3526)"
+                         quality_str="MEDIUM"
+                    fi
+                    if [[ "$curves_offered" =~ Unknown ]]; then
+                         fileout "DH_groups" "$quality_str" "$curves_offered ($len_dh_p bits) (should use primes from RFC 7919 or RFC 3526)"
+                    else
+                         fileout "DH_groups" "$quality_str" "$curves_offered (should use primes from RFC 7919 or RFC 3526)"
+                    fi
                else
-                    pr_dh "$curves_offered" "$len_dh_p"
-                    quality=$?
-               fi
-               case "$quality" in
-                    1) quality_str="CRITICAL" ;;
-                    2) quality_str="HIGH" ;;
-                    3) quality_str="MEDIUM" ;;
-                    4) quality_str="LOW" ;;
-                    5) quality_str="INFO" ;;
-                    6|7) quality_str="OK" ;;
-               esac
-               if [[ "$curves_offered" =~ Unknown ]]; then
-                    fileout "DH_groups" "$quality_str" "$curves_offered ($len_dh_p bits)"
-               else
-                    fileout "DH_groups" "$quality_str" "$curves_offered"
+                    if [[ "$curves_offered" =~ ffdhe ]]; then
+                         # ok not to display them in italics:
+                         pr_svrty_good "$curves_offered"
+                         quality=6
+                    else
+                         pr_dh "$curves_offered" "$len_dh_p"
+                         quality=$?
+                    fi
+                    case "$quality" in
+                         1) quality_str="CRITICAL" ;;
+                         2) quality_str="HIGH" ;;
+                         3) quality_str="MEDIUM" ;;
+                         4) quality_str="LOW" ;;
+                         5) quality_str="INFO" ;;
+                         6|7) quality_str="OK" ;;
+                    esac
+                    if [[ "$curves_offered" =~ Unknown ]]; then
+                         fileout "DH_groups" "$quality_str" "$curves_offered ($len_dh_p bits)"
+                    else
+                         fileout "DH_groups" "$quality_str" "$curves_offered"
+                    fi
                fi
                outln
           fi
@@ -18120,6 +18538,20 @@ out_common_prime() {
      # Now (below) size matters -- i.e. the bit size. As this is about a known prime we label it more strict.
      # This needs maybe needs another thought as it could appear inconsistent with run_fs and elsewhere.
      # for now we label the bit size similar in the screen, but distinguish the leading text for logjam before
+     elif "$NIST"; then
+          if [[ $DH_GROUP_LEN_P -lt 2048 ]]; then
+               pr_svrty_critical "VULNERABLE (NOT ok):"; out " common prime: "
+               fileout "$jsonID2" "CRITICAL" "$DH_GROUP_OFFERED" "$cve" "$cwe"
+               pr_dh "$DH_GROUP_OFFERED" $DH_GROUP_LEN_P; pr_svrty_critical " (should use primes from RFC 7919 or RFC 3526)"
+          elif [[ "$DH_GROUP_OFFERED" =~ 7919 ]] || ( [[ "$DH_GROUP_OFFERED" =~ 3526 ]] && [[ ! "$DH_GROUP_OFFERED" =~ Oakley\ Group\ 5 ]] ); then
+               out "common prime: "
+               fileout "$jsonID2" "INFO" "$DH_GROUP_OFFERED" "$cve" "$cwe"
+               pr_dh "$DH_GROUP_OFFERED" $DH_GROUP_LEN_P
+          else
+               out "common prime: "
+               fileout "$jsonID2" "MEDIUM" "$DH_GROUP_OFFERED (should use primes from RFC 7919 or RFC 3526)" "$cve" "$cwe"
+               pr_dh "$DH_GROUP_OFFERED" $DH_GROUP_LEN_P; pr_svrty_medium " (should use primes from RFC 7919 or RFC 3526)"
+          fi
      elif [[ $DH_GROUP_LEN_P -le 800 ]]; then
           pr_svrty_critical "VULNERABLE (NOT ok):"; out " common prime: "
           fileout "$jsonID2" "CRITICAL" "$DH_GROUP_OFFERED" "$cve" "$cwe"
@@ -18275,7 +18707,12 @@ run_logjam() {
                out_common_prime "$jsonID2" "$cve" "$cwe"
           elif [[ $subret -eq 0 ]]; then
                out " no common primes detected"
-               fileout "$jsonID2" "INFO" "--" "$cve" "$cwe"
+               if "$NIST"; then
+                    pr_svrty_medium " (should use primes from RFC 7919 or RFC 3526)"
+                    fileout "$jsonID2" "MEDIUM" "DHE prime not from RFC 7919 or RFC 3526" "$cve" "$cwe"
+               else
+                    fileout "$jsonID2" "INFO" "--" "$cve" "$cwe"
+               fi
           elif [[ $ret -eq 1 ]]; then
                out "FIXME 1"
           fi
@@ -18295,8 +18732,18 @@ run_logjam() {
           elif [[ $subret -eq 0 ]]; then
                pr_svrty_good "not vulnerable (OK):"; out " no DH EXPORT ciphers${addtl_warning}"
                fileout "$jsonID" "OK" "not vulnerable, no DH EXPORT ciphers,$addtl_warning" "$cve" "$cwe"
+               if "$NIST"; then
+                    if [[ $DH_GROUP_LEN_P -lt 2048 ]]; then
+                         out "\n${spaces}But: "
+                         pr_dh "$DH_GROUP_OFFERED" $DH_GROUP_LEN_P; pr_svrty_critical " (should use primes from RFC 7919 or RFC 3526)"
+                         fileout "$jsonID" "CRITICAL" "no DH EXPORT ciphers, but $DH_GROUP_OFFERED has only $DH_GROUP_LEN_P bits (should use primes from RFC 7919 or RFC 3526),  $addtl_warning" "$cve" "$cwe"
+                    else
+                         out ", no common prime detected"
+                         pr_svrty_medium " (should use primes from RFC 7919 or RFC 3526)"
+                         fileout "$jsonID2" "MEDIUM" "DH prime not from RFC 7919 or RFC 3526" "$cve" "$cwe"
+                    fi
                # we issue a special warning if there's no common prime but the bit length is too low
-               if [[ $DH_GROUP_LEN_P -le 1024 ]]; then
+               elif [[ $DH_GROUP_LEN_P -le 1024 ]]; then
                     out "\n${spaces}But: "
                     pr_dh "$DH_GROUP_OFFERED" $DH_GROUP_LEN_P
                     case $? in
@@ -20567,6 +21014,7 @@ tuning / connect options (most also can be preset via environment variables):
      --mtls <CLIENT CERT file>     path to <CLIENT CERT> file in PEM format containing unencrypted certificate key (beta)
      --basicauth <user:pass>       provide HTTP basic auth information
      --reqheader <header>          add custom http request headers
+     --nist                        test for conformance to NIST Special Publication 800-52 Revision 2
 
 output options (can also be preset via environment variables):
      --quiet                       don't output the banner. By doing this you acknowledge usage terms normally appearing in the banner
@@ -23279,7 +23727,10 @@ set_scanning_defaults() {
      else
           VULN_COUNT=13
      fi
-     do_rating=true
+     # The ratings do not currently take NIST requirements into account, and
+     # so could be misleading for those trying to determine conformance to
+     # NIST guidelines.
+     "$NIST" || do_rating=true
 }
 
 # returns number of $do variables set = number of run_funcs() to perform
@@ -23654,6 +24105,9 @@ parse_cmd_line() {
                     ;;
                --sneaky)
                     SNEAKY=true
+                    ;;
+               --nist)
+                    NIST=true
                     ;;
                --user-agent|--user-agent=*)
                     UA_STD="$(parse_opt_equal_sign "$1" "$2")"

@@ -231,6 +231,8 @@ in <code>/etc/hosts</code>.  The use of the switch is only useful if you either 
 
 <p><code>--add-ca &lt;CAfile&gt;</code> enables you to add your own CA(s) in PEM format for trust chain checks. <code>CAfile</code> can be a directory containing files with a .pem extension, a single file or multiple files as a comma separated list of root CAs. Internally they will be added during runtime to all CA stores. This is (only) useful for internal hosts whose certificates are issued by internal CAs. Alternatively ADDTL_CA_FILES is the environment variable for this.</p>
 
+<p><code>--nist</code> indicates that testing should check for conformance to the recommendations of the U.S. National Institute of Standards and Technology (NIST), including NIST Special Publication (SP) 800-53 Revision 2 and SP 800-56A Revision 3. This switch will affect, for example, the ratings that are applied to cipher suites. NIST is the environment variable for this which needs to be set to true if you want this.</p>
+
 <h3 id="SINGLE-CHECK-OPTIONS">SINGLE CHECK OPTIONS</h3>
 
 <p>Any single check switch supplied as an argument prevents testssl.sh from doing a default run. It just takes this and if supplied other options and runs them - in the order they would also appear in the default run.</p>
