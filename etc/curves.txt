@@ -31,4 +31,12 @@
 30, curve448,
 31, brainpoolP256r1tls13,
 32, brainpoolP384r1tls13,
-33, brainpoolP512r1tls13
+33, brainpoolP512r1tls13,
+34, GC256A,
+35, GC256B,
+36, GC256C,
+37, GC256D,
+38, GC512A,
+39, GC512B,
+40, GC512C,
+41, curveSM2

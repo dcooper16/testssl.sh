@@ -3,6 +3,11 @@
 # vim:ts=5:sw=5:expandtab
 # we have a spaces softtab, that ensures readability with other editors too
 
+#FIXME: Add new ciphers to openssl-iana.mapping.html, etc/cipher-mapping.txt, run_cipherlists(), get_cipher_quality(), run_server_preference(), run_fs()
+# TODO: c0,b[0-3]     # RFC 8492 (TLS_ECCPWD)
+# TODO: [cC]1,0[0-2]  # RFC 9189
+# TODO: [cC]1,0[3-6]  # draft-smyshlyaev-tls13-gost-suites
+
 # testssl.sh is a program for spotting weak SSL/TLS encryption, ciphers, protocols and some
 # vulnerabilities or features. It may or may be not distributed by your distribution.
 # The upstream versions are available (please leave the links intact):
@@ -455,6 +460,12 @@ declare TLS_CIPHER_ENC=()
 declare TLS_CIPHER_EXPORT=()
 declare TLS_CIPHER_OSSL_SUPPORTED=()
 declare TLS13_OSSL_CIPHERS="TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256"
+
+# Regular expression that matches all TLS 1.3 ciphers (see RFC 8446, RFC 8998,
+# RFC 9150, and draft-camwinget-tls-ts13-macciphersuites).
+# Note that strip_inconsistent_ciphers() also needs to be updated whenever a new
+# TLS 1.3-only cipher suite is added.
+declare TLS13_CIPHERS_REGEX="13,0[1-5]|00,[cC][67]|[cC]0,[bB][45]|[cC]1,0[3-6]"
 
 
 ########### Some predefinitions: date, sed (we always use tests for binaries and NOT try to determine
@@ -1001,7 +1012,12 @@ strip_inconsistent_ciphers() {
      local -i proto=0x$1
      local cipherlist="$2"
 
-     [[ $proto -lt 4 ]] && cipherlist="${cipherlist//, 13,0[0-9a-fA-F]/}"
+     if [[ $proto -lt 4 ]]; then
+          cipherlist="${cipherlist//, 13,0[1-5]/}"
+          cipherlist="${cipherlist//, 00,[cC][67]/}" # RFC 8998
+          cipherlist="${cipherlist//, [cC]0,[bB][45]/}" # RFC 9150
+          cipherlist="${cipherlist//, [cC]1,0[3-6]/}" # draft-smyshlyaev-tls13-gost-suites
+     fi
      if [[ $proto -lt 3 ]]; then
           cipherlist="${cipherlist//, 00,3[b-fB-F]/}"
           cipherlist="${cipherlist//, 00,40/}"
@@ -1010,11 +1026,13 @@ strip_inconsistent_ciphers() {
           cipherlist="${cipherlist//, 00,[abAB][0-9a-fA-F]/}"
           cipherlist="${cipherlist//, 00,[cC][0-5]/}"
           cipherlist="${cipherlist//, 16,[bB][7-9aA]/}"
+          cipherlist="${cipherlist//, [cC]1,0[0-2]/}" # RFC 9189
           cipherlist="${cipherlist//, [cC]0,2[3-9a-fA-F]/}"
           cipherlist="${cipherlist//, [cC]0,3[01278a-fA-F]/}"
           cipherlist="${cipherlist//, [cC]0,[4-9aA][0-9a-fA-F]/}"
           cipherlist="${cipherlist//, [cC][cC],1[345]/}"
           cipherlist="${cipherlist//, [cC][cC],[aA][89a-eA-E]/}"
+          cipherlist="${cipherlist//, [dD]0,0[1235]/}" # RFC 8442
      fi
      echo "$cipherlist"
      return 0
@@ -3936,7 +3954,7 @@ run_cipher_match(){
                          tls13_ciphers_to_test=""
                          for (( i=bundle*bundle_size; i < end_of_bundle; i++ )); do
                               if ! "${ciphers_found2[i]}"; then
-                                   if [[ "${ciph2[i]}" == TLS13* ]] || [[ "${ciph2[i]}" == TLS_* ]] || [[ "${ciph2[i]}" == AEAD-* ]]; then
+                                   if [[ ":$TLS13_OSSL_CIPHERS:" =~ :${ciph2[i]}: ]]; then
                                         tls13_ciphers_to_test+=":${ciph2[i]}"
                                    else
                                         ciphers_to_test+=":${ciph2[i]}"
@@ -3954,7 +3972,7 @@ run_cipher_match(){
                          [[ $i -eq $end_of_bundle ]] && break
                          i=${index[i]}
                          ciphers_found[i]=true
-                         if [[ "$cipher" == TLS13* ]] || [[ "$cipher" == TLS_* ]] || [[ "$cipher" == AEAD-* ]]; then
+                         if [[ ":$TLS13_OSSL_CIPHERS:" =~ :${cipher}: ]]; then
                               kx[i]="$(read_dhtype_from_file $TMPFILE)"
                          fi
                          if [[ ${kx[i]} == "Kx=ECDH" ]] || [[ ${kx[i]} == "Kx=DH" ]] || [[ ${kx[i]} == "Kx=EDH" ]]; then
@@ -4001,7 +4019,8 @@ run_cipher_match(){
                               ! "${ciphers_found2[i]}" && ciphers_to_test+=", ${hexcode2[i]}"
                          done
                          [[ -z "$ciphers_to_test" ]] && break
-                         [[ "$proto" == 04 ]] && [[ ! "$ciphers_to_test" =~ ,\ 13,[0-9a-f][0-9a-f] ]] && break
+                         [[ "$proto" == 04 ]] && [[ ! "$ciphers_to_test" =~ ,\ ($TLS13_CIPHERS_REGEX) ]] && \
+                              break
                          ciphers_to_test="$(strip_inconsistent_ciphers "$proto" "$ciphers_to_test")"
                          [[ -z "$ciphers_to_test" ]] && break
                          if "$SHOW_SIGALGO"; then
@@ -4210,7 +4229,7 @@ run_allciphers() {
                     tls13_ciphers_to_test=""
                     for (( i=bundle*bundle_size; i < end_of_bundle; i++ )); do
                          if ! "${ciphers_found2[i]}"; then
-                              if [[ "${ciph2[i]}" == TLS13* ]] || [[ "${ciph2[i]}" == TLS_* ]] || [[ "${ciph2[i]}" == AEAD-* ]]; then
+                              if [[ ":$TLS13_OSSL_CIPHERS:" =~ :${ciph2[i]}: ]]; then
                                    tls13_ciphers_to_test+=":${ciph2[i]}"
                               else
                                    ciphers_to_test+=":${ciph2[i]}"
@@ -4228,7 +4247,7 @@ run_allciphers() {
                     [[ $i -eq $end_of_bundle ]] && break
                     i=${index[i]}
                     ciphers_found[i]=true
-                    if [[ "$cipher" == TLS13* ]] || [[ "$cipher" == TLS_* ]] || [[ "$cipher" == AEAD-* ]]; then
+                    if [[ ":$TLS13_OSSL_CIPHERS:" =~ :${cipher}: ]]; then
                          kx[i]="$(read_dhtype_from_file $TMPFILE)"
                     fi
                     if [[ ${kx[i]} == Kx=ECDH ]] || [[ ${kx[i]} == Kx=DH ]] || [[ ${kx[i]} == Kx=EDH ]]; then
@@ -4276,7 +4295,7 @@ run_allciphers() {
                          ! "${ciphers_found2[i]}" && ciphers_to_test+=", ${hexcode2[i]}"
                     done
                     [[ -z "$ciphers_to_test" ]] && break
-                    [[ "$proto" == 04 ]] && [[ ! "$ciphers_to_test" =~ ,\ 13,[0-9a-f][0-9a-f] ]] && break
+                    [[ "$proto" == 04 ]] && [[ ! "$ciphers_to_test" =~ ,\ ($TLS13_CIPHERS_REGEX) ]] && break
                     ciphers_to_test="$(strip_inconsistent_ciphers "$proto" "$ciphers_to_test")"
                     [[ -z "$ciphers_to_test" ]] && break
                     if "$SHOW_SIGALGO"; then
@@ -4392,11 +4411,12 @@ ciphers_by_strength() {
                if { "$using_sockets" || "${TLS_CIPHER_OSSL_SUPPORTED[i]}"; }; then
                     if [[ ${#hexc} -eq 9 ]] && [[ "$proto" != -ssl2 ]]; then
                          if [[ "$proto" == -tls1_3 ]]; then
-                              [[ "${hexc:2:2}" == 13 ]] && nr_ciphers+=1
+                              [[ "${hexc:2:2},${hexc:7:2}" =~ $TLS13_CIPHERS_REGEX ]] && nr_ciphers+=1
                          elif [[ "$proto" == -tls1_2 ]]; then
-                              [[ "${hexc:2:2}" != 13 ]] && nr_ciphers+=1
+                              [[ ! "${hexc:2:2},${hexc:7:2}" =~ $TLS13_CIPHERS_REGEX ]] && nr_ciphers+=1
                          elif [[ ! "${TLS_CIPHER_RFC_NAME[i]}" =~ SHA256 ]] && [[ ! "${TLS_CIPHER_RFC_NAME[i]}" =~ SHA384 ]] && \
-                              [[ "${TLS_CIPHER_RFC_NAME[i]}" != *_CCM ]] && [[ "${TLS_CIPHER_RFC_NAME[i]}" != *_CCM_8 ]]; then
+                              [[ "${TLS_CIPHER_RFC_NAME[i]}" != *_CCM ]] && [[ "${TLS_CIPHER_RFC_NAME[i]}" != *_CCM_8 ]] && \
+                              [[ "${TLS_CIPHER_RFC_NAME[i]}" != TLS_ECCPWD_WITH_AES_* ]]; then
                               nr_ciphers+=1
                          fi
                     elif [[ ${#hexc} -eq 14 ]] && [[ "$proto" == -ssl2 ]]; then
@@ -4418,11 +4438,14 @@ ciphers_by_strength() {
           fi
           while read hexc n ciph[nr_ciphers] sslvers kx[nr_ciphers] auth enc[nr_ciphers] mac export2[nr_ciphers]; do
                if [[ "$proto" == -tls1_3 ]]; then
-                    [[ "${ciph[nr_ciphers]}" == TLS13* ]] || [[ "${ciph[nr_ciphers]}" == TLS_* ]] || [[ "${ciph[nr_ciphers]}" == AEAD-* ]] || continue
+                    [[ ":$TLS13_OSSL_CIPHERS:" =~ :${ciph[nr_ciphers]}: ]] || continue
                elif [[ "$proto" == -tls1_2 ]]; then
-                    if [[ "${ciph[nr_ciphers]}" == TLS13* ]] || [[ "${ciph[nr_ciphers]}" == TLS_* ]] || [[ "${ciph[nr_ciphers]}" == AEAD-* ]]; then
+                    if [[ ":$TLS13_OSSL_CIPHERS:" =~ :${ciph[nr_ciphers]}: ]]; then
                          continue
                     fi
+               # FIXME: Ciphers from RFC 8492 should not be excluded from pre-TLS 1.2 testing even
+               # though their names end in SHA256 or SHA384. (To be fixed if OpenSSL names are ever
+               # assigned to these cipher suites.
                elif [[ "${ciph[nr_ciphers]}" == *-SHA256 ]] || [[ "${ciph[nr_ciphers]}" == *-SHA384 ]] || \
                     [[ "${ciph[nr_ciphers]}" == *-CCM ]] || [[ "${ciph[nr_ciphers]}" == *-CCM8 ]] || \
                     [[ "${ciph[nr_ciphers]}" =~ CHACHA20-POLY1305 ]]; then
@@ -6151,7 +6174,7 @@ sub_cipherlists() {
                for proto in 04 03 02 01 00; do
                     # If $cipherlist doesn't contain any TLSv1.3 ciphers, then there is
                     # no reason to try a TLSv1.3 ClientHello.
-                    [[ "$proto" == 04 ]] && [[ ! "$6" =~ 13,0 ]] && continue
+                    [[ "$proto" == 04 ]] && [[ ! "$6" =~ $TLS13_CIPHERS_REGEX ]] && continue
                     [[ $(has_server_protocol "$proto") -eq 1 ]] && continue
                     cipherlist="$(strip_inconsistent_ciphers "$proto" ", $6")"
                     cipherlist="${cipherlist:2}"
@@ -6309,8 +6332,10 @@ run_cipherlists() {
 
      # conversion 2 byte ciphers via:  echo "$@" | sed -e 's/[[:xdigit:]]\{2\},/0x&/g'  -e 's/, /\n/g' | while read ci; do grep -wi $ci etc/cipher-mapping.txt; done
 
+     # FIXME: Add TLS_SHA256_SHA256 and TLS_SHA384_SHA384 as TLS 1.3 NULL ciphers
+     # if they are ever implemented in OpenSSL/LibreSSL.
      ossl_null_ciphers='NULL:eNULL'
-     null_ciphers="c0,10, c0,06, c0,15, c0,0b, c0,01, c0,3b, c0,3a, c0,39, 00,b9, 00,b8, 00,b5, 00,b4, 00,2e, 00,2d, 00,b1, 00,b0, 00,2c, 00,3b, 00,02, 00,01, 00,82, 00,83, ff,87, 00,ff"
+     null_ciphers="c0,10, c0,06, c0,15, c0,0b, c0,01, c0,3b, c0,3a, c0,39, 00,b9, 00,b8, 00,b5, 00,b4, 00,2e, 00,2d, 00,b1, 00,b0, 00,2c, 00,3b, 00,02, 00,01, 00,82, 00,83, ff,87, c0,b4, c0,b5, 00,ff"
      sslv2_null_ciphers="FF,80,10, 00,00,00"
 
      ossl_anon_ciphers='aNULL:ADH'
@@ -6346,8 +6371,8 @@ run_cipherlists() {
      good_ciphers="00,9C, 00,9D, 00,A0, 00,A1, 00,A4, 00,A5, 00,A8, 00,A9, 00,AC, 00,AD, C0,2D, C0,2E, C0,31, C0,32, C0,50, C0,51, C0,54, C0,55, C0,58, C0,59, C0,5E, C0,5F, C0,62, C0,63, C0,6A, C0,6B, C0,6E, C0,6F, C0,7A, C0,7B, C0,7E, C0,7F, C0,82, C0,83, C0,88, C0,89, C0,8C, C0,8D, C0,8E, C0,8F, C0,92, C0,93, C0,9C, C0,9D, C0,A0, C0,A1, C0,A4, C0,A5, C0,A8, C0,A9, CC,AB, CC,AE, 00,FF"
 
      ossl_strong_ciphers='AESGCM:CHACHA20:CamelliaGCM:AESCCM:ARIAGCM:!kPSK:!kRSAPSK:!kRSA:!kDH:!kECDH:!aNULL'
-     # grep AEAD etc/cipher-mapping.txt | grep -E 'TLS_ECDHE|TLS_DHE|TLS_PSK_DHE|TLSv1.3'
-     strong_ciphers="00,9E, 00,9F, 00,A2, 00,A3, 00,AA, 00,AB, 13,01, 13,02, 13,03, 13,04, 13,05, 16,B7, 16,B8, 16,B9, 16,BA, C0,2B, C0,2C, C0,2F, C0,30, C0,52, C0,53, C0,56, C0,57, C0,5C, C0,5D, C0,60, C0,61, C0,6C, C0,6D, C0,7C, C0,7D, C0,80, C0,81, C0,86, C0,87, C0,8A, C0,8B, C0,90, C0,91, C0,9E, C0,9F, C0,A2, C0,A3, C0,A6, C0,A7, C0,AA, C0,AB, C0,AC, C0,AD, C0,AE, C0,AF, CC,13, CC,14, CC,15, CC,A8, CC,A9, CC,AA, CC,AC, CC,AD, 00,FF"
+     # grep AEAD etc/cipher-mapping.txt | grep -E 'TLS_ECDHE|TLS_DHE|TLS_PSK_DHE|TLS_ECDHE_PSK|TLSv1.3'
+     strong_ciphers="00,9E, 00,9F, 00,A2, 00,A3, 00,AA, 00,AB, 13,01, 13,02, 13,03, 13,04, 13,05, 16,B7, 16,B8, 16,B9, 16,BA, C0,2B, C0,2C, C0,2F, C0,30, C0,52, C0,53, C0,56, C0,57, C0,5C, C0,5D, C0,60, C0,61, C0,6C, C0,6D, C0,7C, C0,7D, C0,80, C0,81, C0,86, C0,87, C0,8A, C0,8B, C0,90, C0,91, C0,9E, C0,9F, C0,A2, C0,A3, C0,A6, C0,A7, C0,AA, C0,AB, C0,AC, C0,AD, C0,AE, C0,AF, CC,13, CC,14, CC,15, CC,A8, CC,A9, CC,AA, CC,AC, CC,AD, 00,C6, 00,C7, C1,03, C1,04, C1,05, C1,06, D0,01, D0,02, D0,03, D0,05, 00,FF"
 
      # argv[1]: non-TLSv1.3 cipher list to test in OpenSSL syntax
      # argv[2]: TLSv1.3 cipher list to test in OpenSSL syntax
@@ -6374,6 +6399,8 @@ run_cipherlists() {
      ret=$((ret + $?))
      sub_cipherlists "$ossl_good_ciphers"      "" " Strong encryption (AEAD ciphers) with no FS     "     6 "STRONG_NOFS"      "$good_ciphers"     ""                     "$using_sockets" ""      ""
      ret=$((ret + $?))
+     # FIXME: If TLS_SHA256_SHA256 or TLS_SHA384_SHA384 is ever implemented by
+     # OpenSSL/LibreSSL, then can't send 'ALL' as TLS 1.3 strong cipher list.
      sub_cipherlists "$ossl_strong_ciphers" 'ALL' " Forward Secrecy strong encryption (AEAD ciphers)"    7 "STRONG_FS"     "$strong_ciphers"   ""                     "$using_sockets" ""      ""
      ret=$((ret + $?))
 
@@ -6488,6 +6515,17 @@ pr_ecdh_curve_quality() {
           "brainpoolP512r1"*) bits=512  ;;
           "X25519") bits=253  ;;
           "X448") bits=448  ;;
+          "brainpoolP256r1tls13") bits=256  ;;
+          "brainpoolP384r1tls13") bits=384  ;;
+          "brainpoolP512r1tls13") bits=512  ;;
+          "GC256A") bits=256  ;;
+          "GC256B") bits=256  ;;
+          "GC256C") bits=256  ;;
+          "GC256D") bits=256  ;;
+          "GC512A") bits=512  ;;
+          "GC512B") bits=512  ;;
+          "GC512C") bits=512  ;;
+          "curveSM2") bits=256  ;;
      esac
      pr_ecdh_quality "$bits" "$curve"
 }
@@ -6515,7 +6553,7 @@ get_cipher_quality() {
                # We have an OpenSSL name and can't convert it to the RFC name which is rarely
                # the case, see "prepare_arrays()" and "./etc/cipher-mapping.txt"
                case "$cipher" in
-                    *NULL*|EXP*|ADH*|AECDH*|*anon*)
+                    *NULL*|EXP*|ADH*|AECDH*|*anon*|TLS_SHA*)
                          return 1
                          ;;
                     *RC4*|*RC2*|*MD5|*M1)
@@ -6557,7 +6595,7 @@ get_cipher_quality() {
 
      # Now we look at the RFC cipher names. The sequence matters - as above.
      case "$cipher" in
-          *NULL*|*EXP*|*_DES40_*|*anon*)
+          *NULL*|*EXP*|*_DES40_*|*anon*|TLS_SHA*)
                return 1
                ;;
           *RC4*|*RC2*|*MD5|*MD5_1)
@@ -6656,6 +6694,7 @@ read_sigalg_from_file() {
      case "$sig_alg" in
           1.3.101.112|ED25519) tm_out "Ed25519" ;;
           1.3.101.113|ED448)   tm_out "Ed448" ;;
+          1.2.156.10197.1.501) tm_out "SM2-with-SM3" ;;
           *)                   tm_out "$sig_alg" ;;
      esac
 
@@ -7316,13 +7355,14 @@ cipher_pref_check() {
                          index[nr_nonossl_ciphers]=$i
                          # Only test ciphers that are relevant to the protocol.
                          if [[ $proto == tls1_3 ]]; then
-                              [[ "${hexc:2:2}" == 13 ]] && nr_nonossl_ciphers+=1
+                              [[ "${hexc:2:2},${hexc:7:2}" =~ $TLS13_CIPHERS_REGEX ]] && nr_nonossl_ciphers+=1
                          elif [[ $proto == tls1_2 ]]; then
-                              [[ "${hexc:2:2}" != 13 ]] && nr_nonossl_ciphers+=1
+                              [[ ! "${hexc:2:2},${hexc:7:2}" =~ $TLS13_CIPHERS_REGEX ]] && nr_nonossl_ciphers+=1
                          elif [[ ! "${TLS_CIPHER_RFC_NAME[i]}" =~ SHA256 ]] && \
                               [[ ! "${TLS_CIPHER_RFC_NAME[i]}" =~ SHA384 ]] && \
                               [[ "${TLS_CIPHER_RFC_NAME[i]}" != *_CCM ]] && \
-                              [[ "${TLS_CIPHER_RFC_NAME[i]}" != *_CCM_8 ]]; then
+                              [[ "${TLS_CIPHER_RFC_NAME[i]}" != *_CCM_8 ]] && \
+                              [[ "${TLS_CIPHER_RFC_NAME[i]}" != TLS_ECCPWD_WITH_AES_* ]]; then
                               nr_nonossl_ciphers+=1
                          fi
                     fi
@@ -7390,13 +7430,14 @@ cipher_pref_check() {
                     hexcode[nr_ciphers]="${hexc:2:2},${hexc:7:2}"
                     rfc_ciph[nr_ciphers]="${TLS_CIPHER_RFC_NAME[i]}"
                     if [[ $proto == tls1_3 ]]; then
-                         [[ "${hexc:2:2}" == 13 ]] && nr_ciphers+=1
+                         [[ "${hexc:2:2},${hexc:7:2}" =~ $TLS13_CIPHERS_REGEX ]] && nr_ciphers+=1
                     elif [[ $proto == tls1_2 ]]; then
-                         [[ "${hexc:2:2}" != 13 ]] && nr_ciphers+=1
+                         [[ ! "${hexc:2:2},${hexc:7:2}" =~ $TLS13_CIPHERS_REGEX ]] && nr_ciphers+=1
                     elif [[ ! "${TLS_CIPHER_RFC_NAME[i]}" =~ SHA256 ]] && \
                          [[ ! "${TLS_CIPHER_RFC_NAME[i]}" =~ SHA384 ]] && \
                          [[ "${TLS_CIPHER_RFC_NAME[i]}" != *_CCM ]] && \
-                         [[ "${TLS_CIPHER_RFC_NAME[i]}" != *_CCM_8 ]]; then
+                         [[ "${TLS_CIPHER_RFC_NAME[i]}" != *_CCM_8 ]] && \
+                         [[ "${TLS_CIPHER_RFC_NAME[i]}" != TLS_ECCPWD_WITH_AES_* ]]; then
                          nr_ciphers+=1
                     fi
                fi
@@ -7409,13 +7450,14 @@ cipher_pref_check() {
                     hexcode[nr_ciphers]="${hexc:2:2},${hexc:7:2}"
                     rfc_ciph[nr_ciphers]="${TLS_CIPHER_RFC_NAME[i]}"
                     if [[ $proto == tls1_3 ]]; then
-                         [[ "${hexc:2:2}" == 13 ]] && nr_ciphers+=1
+                         [[ "${hexc:2:2},${hexc:7:2}" =~ $TLS13_CIPHERS_REGEX ]] && nr_ciphers+=1
                     elif [[ $proto == tls1_2 ]]; then
-                         [[ "${hexc:2:2}" != 13 ]] && nr_ciphers+=1
+                         [[ ! "${hexc:2:2},${hexc:7:2}" =~ $TLS13_CIPHERS_REGEX ]] && nr_ciphers+=1
                     elif [[ ! "${TLS_CIPHER_RFC_NAME[i]}" =~ SHA256 ]] && \
                          [[ ! "${TLS_CIPHER_RFC_NAME[i]}" =~ SHA384 ]] && \
                          [[ "${TLS_CIPHER_RFC_NAME[i]}" != *_CCM ]] && \
-                         [[ "${TLS_CIPHER_RFC_NAME[i]}" != *_CCM_8 ]]; then
+                         [[ "${TLS_CIPHER_RFC_NAME[i]}" != *_CCM_8 ]] && \
+                         [[ "${TLS_CIPHER_RFC_NAME[i]}" != TLS_ECCPWD_WITH_AES_* ]]; then
                          nr_ciphers+=1
                     fi
                fi
@@ -8088,7 +8130,7 @@ get_server_certificate() {
      # Cipher suites that use a certificate with an ECDSA public key
      local -r a_ecdsa="cc,14, c0,2c, c0,24, c0,0a, cc,a9, c0,af, c0,ad, c0,73, c0,49, c0,5d, c0,87, 16,b8, 16,ba, c0,2b, c0,23, c0,09, c0,ae, c0,ac, c0,72, c0,48, c0,5c, c0,86, c0,07, c0,08, c0,06"
      # Cipher suites that use a certificate with a GOST public key
-     local -r a_gost="00,80, 00,81, 00,82, 00,83"
+     local -r a_gost="00,80, 00,81, 00,82, 00,83, c1,00, c1,01, c1,02"
      local using_sockets=true
 
      "$SSL_NATIVE" && using_sockets=false
@@ -8096,7 +8138,7 @@ get_server_certificate() {
      CERTIFICATE_LIST_ORDERING_PROBLEM=false
      if [[ "$1" =~ tls1_3 ]]; then
           [[ $(has_server_protocol "tls1_3") -eq 1 ]] && return 1
-          if "$HAS_TLS13" && "$HAS_SIGALGS" && [[ ! "$1" =~ tls1_3_EdDSA ]]; then
+          if "$HAS_TLS13" && "$HAS_SIGALGS" && [[ "$1" =~ tls1_3_RSA || "$1" =~ tls1_3_ECDSA ]]; then
                if [[ "$1" =~ tls1_3_RSA ]]; then
                     $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -showcerts -connect $NODEIP:$PORT $PROXY $SNI -tls1_3 -tlsextdebug -status -msg -sigalgs PSS+SHA256:PSS+SHA384:PSS+SHA512:rsa_pss_pss_sha256:rsa_pss_pss_sha384:rsa_pss_pss_sha512") </dev/null 2>$ERRFILE >$TMPFILE
                elif [[ "$1" =~ tls1_3_ECDSA ]]; then
@@ -8119,6 +8161,10 @@ get_server_certificate() {
                     tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,0a,00,08,04,03,05,03,06,03,02,03"
                elif [[ "$1" =~ tls1_3_EdDSA ]]; then
                     tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,06,00,04,08,07,08,08"
+               elif [[ "$1" =~ tls1_3_GOST ]]; then
+                    tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,10,00,0e,07,09,07,0a,07,0b,07,0c,07,0d,07,0e,07,0f"
+               elif [[ "$1" =~ tls1_3_SM2 ]]; then
+                    tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,04,00,02,07,08"
                else
                     return 1
                fi
@@ -8759,7 +8805,7 @@ certificate_transparency() {
      # Cipher suites that use a certificate with an ECDSA public key
      local -r a_ecdsa="cc,14, c0,2c, c0,24, c0,0a, cc,a9, c0,af, c0,ad, c0,73, c0,49, c0,5d, c0,87, 16,b8, 16,ba, c0,2b, c0,23, c0,09, c0,ae, c0,ac, c0,72, c0,48, c0,5c, c0,86, c0,07, c0,08, c0,06"
      # Cipher suites that use a certificate with a GOST public key
-     local -r a_gost="00,80, 00,81, 00,82, 00,83"
+     local -r a_gost="00,80, 00,81, 00,82, 00,83, c1,00, c1,01, c1,02"
 
      CERTIFICATE_TRANSPARENCY_SOURCE=""
 
@@ -8789,9 +8835,15 @@ certificate_transparency() {
           if [[ "$tls_version" == 0304 ]]; then
                ciphers=", 13,01, 13,02, 13,03, 13,04, 13,05"
                if [[ "$cipher" == tls1_3_RSA ]]; then
-                    extra_extns=", 00,0d,00,10,00,0e,08,04,08,05,08,06,04,01,05,01,06,01,02,01"
+                    extra_extns=", 00,0d,00,16,00,14,08,04,08,05,08,06,08,09,08,0a,08,0b,04,01,05,01,06,01,02,01"
                elif [[ "$cipher" == tls1_3_ECDSA ]]; then
                     extra_extns=", 00,0d,00,0a,00,08,04,03,05,03,06,03,02,03"
+               elif [[ "$cipher" == tls1_3_EdDSA ]]; then
+                   extra_extns=", 00,0d,00,06,00,04,08,07,08,08"
+               elif [[ "$cipher" == tls1_3_GOST ]]; then
+                   extra_extns=", 00,0d,00,10,00,0e,07,09,07,0a,07,0b,07,0c,07,0d,07,0e,07,0f"
+               elif [[ "$cipher" == tls1_3_SM2 ]]; then
+                   extra_extns=", 00,0d,00,04,00,02,07,08"
                else
                     return 1
                fi
@@ -8977,6 +9029,7 @@ certificate_info() {
      case "$cert_sig_algo" in
           1.3.101.112|ED25519) cert_sig_algo="Ed25519" ;;
           1.3.101.113|ED448)   cert_sig_algo="Ed448" ;;
+          1.2.156.10197.1.501) cert_sig_algo="SM2-with-SM3" ;;
      esac
      cert_key_algo="$(awk -F':' '/Public Key Algorithm:/ { print $2; if (++Match >= 1) exit; }' <<< "$cert_txt")"
      cert_key_algo="${cert_key_algo// /}"
@@ -9094,6 +9147,10 @@ certificate_info() {
           Ed25519|Ed448)
                prln_svrty_good "$cert_sig_algo"
                fileout "${jsonID}${json_postfix}" "OK" "$cert_sig_algo"
+               ;;
+          SM2-with-SM3)
+               outln "SM2 with SM3"
+               fileout "${jsonID}${json_postfix}" "INFO" "SM2 with SM3"
                ;;
           *)
                out "$cert_sig_algo ("
@@ -10012,27 +10069,30 @@ run_server_defaults() {
      ciphers_to_test[8]="tls1_3_RSA"
      ciphers_to_test[9]="tls1_3_ECDSA"
      ciphers_to_test[10]="tls1_3_EdDSA"
+     ciphers_to_test[11]="tls1_3_GOST"
+     ciphers_to_test[12]="tls1_3_SM2"
      certificate_type[1]="" ; certificate_type[2]=""
      certificate_type[3]=""; certificate_type[4]=""
      certificate_type[5]="" ; certificate_type[6]=""
      certificate_type[7]="" ; certificate_type[8]="RSASig"
      certificate_type[9]="ECDSA" ; certificate_type[10]="EdDSA"
+     certificate_type[11]="GOST" ; certificate_type[12]="SM2"
 
-     for (( n=1; n <= 17 ; n++ )); do
+     for (( n=1; n <= 19 ; n++ )); do
           # Some servers use a different certificate if the ClientHello
           # specifies TLSv1.1 and doesn't include a server name extension.
           # So, for each public key type for which a certificate was found,
           # try again, but only with TLSv1.1 and without SNI.
           if [[ $n -ne 1 ]] && [[ "$OPTIMAL_PROTO" == -ssl2 ]]; then
                ciphers_to_test[n]=""
-          elif [[ $n -ge 11 ]]; then
+          elif [[ $n -ge 13 ]]; then
                ciphers_to_test[n]=""
-               [[ ${success[n-10]} -eq 0 ]] && [[ $(has_server_protocol "tls1_1") -ne 1 ]] && \
-                    ciphers_to_test[n]="${ciphers_to_test[n-10]}" && certificate_type[n]="${certificate_type[n-10]}"
+               [[ ${success[n-12]} -eq 0 ]] && [[ $(has_server_protocol "tls1_1") -ne 1 ]] && \
+                    ciphers_to_test[n]="${ciphers_to_test[n-12]}" && certificate_type[n]="${certificate_type[n-12]}"
           fi
 
           if [[ -n "${ciphers_to_test[n]}" ]]; then
-               if [[ $n -ge 11 ]]; then
+               if [[ $n -ge 13 ]]; then
                     sni="$SNI"
                     SNI=""
                     get_server_certificate "${ciphers_to_test[n]}" "tls1_1"
@@ -10043,7 +10103,7 @@ run_server_defaults() {
                     success[n]=$?
                fi
                if [[ ${success[n]} -eq 0 ]] && [[ -s "$HOSTCERT" ]]; then
-                    [[ $n -ge 11 ]] && [[ ! -e $HOSTCERT.nosni ]] && cp $HOSTCERT $HOSTCERT.nosni
+                    [[ $n -ge 13 ]] && [[ ! -e $HOSTCERT.nosni ]] && cp $HOSTCERT $HOSTCERT.nosni
                     cp "$TEMPDIR/$NODEIP.get_server_certificate.txt" $TMPFILE
                     >$ERRFILE
                     if [[ -z "$sessticket_lifetime_hint" ]]; then
@@ -10125,7 +10185,7 @@ run_server_defaults() {
                          fi
                          i=$((i + 1))
                     done
-                    if ! "$match_found" && [[ $n -ge 11 ]] && [[ $certs_found -ne 0 ]]; then
+                    if ! "$match_found" && [[ $n -ge 13 ]] && [[ $certs_found -ne 0 ]]; then
                          # A new certificate was found using TLSv1.1 without SNI.
                          # Check to see if the new certificate should be displayed.
                          # It should be displayed if it is either a match for the
@@ -10182,7 +10242,7 @@ run_server_defaults() {
                          [[ -n "${previous_intermediates[certs_found]}" ]] && [[ -r $TEMPDIR/hostcert_issuer.pem ]] && \
                               previous_hostcert_issuer[certs_found]=$(cat $TEMPDIR/hostcert_issuer.pem)
                          previous_ordering_problem[certs_found]=$CERTIFICATE_LIST_ORDERING_PROBLEM
-                         [[ $n -ge 11 ]] && sni_used[certs_found]="" || sni_used[certs_found]="$SNI"
+                         [[ $n -ge 13 ]] && sni_used[certs_found]="" || sni_used[certs_found]="$SNI"
                          tls_version[certs_found]="$DETECTED_TLS_VERSION"
                          previous_hostcert_type[certs_found]=" ${certificate_type[n]}"
                          if [[ $DEBUG -ge 1 ]]; then
@@ -10465,13 +10525,13 @@ run_fs() {
      local fs_cipher_list="DHE-DSS-AES128-GCM-SHA256:DHE-DSS-AES128-SHA256:DHE-DSS-AES128-SHA:DHE-DSS-AES256-GCM-SHA384:DHE-DSS-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-DSS-CAMELLIA128-SHA256:DHE-DSS-CAMELLIA128-SHA:DHE-DSS-CAMELLIA256-SHA256:DHE-DSS-CAMELLIA256-SHA:DHE-DSS-SEED-SHA:DHE-RSA-AES128-CCM8:DHE-RSA-AES128-CCM:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-CCM8:DHE-RSA-AES256-CCM:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:DHE-RSA-CAMELLIA128-SHA256:DHE-RSA-CAMELLIA128-SHA:DHE-RSA-CAMELLIA256-SHA256:DHE-RSA-CAMELLIA256-SHA:DHE-RSA-CHACHA20-POLY1305-OLD:DHE-RSA-CHACHA20-POLY1305:DHE-RSA-SEED-SHA:ECDHE-ECDSA-AES128-CCM8:ECDHE-ECDSA-AES128-CCM:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-ECDSA-AES256-CCM8:ECDHE-ECDSA-AES256-CCM:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-CAMELLIA128-SHA256:ECDHE-ECDSA-CAMELLIA256-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305-OLD:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-RSA-CAMELLIA128-SHA256:ECDHE-RSA-CAMELLIA256-SHA384:ECDHE-RSA-CHACHA20-POLY1305-OLD:ECDHE-RSA-CHACHA20-POLY1305"
      local fs_hex_cipher_list="" ciphers_to_test tls13_ciphers_to_test
      local ecdhe_cipher_list="" tls13_cipher_list="" ecdhe_cipher_list_hex="" ffdhe_cipher_list_hex=""
-     local curves_hex=("00,01" "00,02" "00,03" "00,04" "00,05" "00,06" "00,07" "00,08" "00,09" "00,0a" "00,0b" "00,0c" "00,0d" "00,0e" "00,0f" "00,10" "00,11" "00,12" "00,13" "00,14" "00,15" "00,16" "00,17" "00,18" "00,19" "00,1a" "00,1b" "00,1c" "00,1d" "00,1e" "00,1f" "00,20" "00,21")
-     local -a curves_ossl=("sect163k1" "sect163r1" "sect163r2" "sect193r1" "sect193r2" "sect233k1" "sect233r1" "sect239k1" "sect283k1" "sect283r1" "sect409k1" "sect409r1" "sect571k1" "sect571r1" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "prime192v1" "secp224k1" "secp224r1" "secp256k1" "prime256v1" "secp384r1" "secp521r1" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13")
-     local -a curves_ossl_output=("K-163" "sect163r1" "B-163" "sect193r1" "sect193r2" "K-233" "B-233" "sect239k1" "K-283" "B-283" "K-409" "B-409" "K-571" "B-571" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "P-192" "secp224k1" "P-224" "secp256k1" "P-256" "P-384" "P-521" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13")
-     local -ai curves_bits=(163 162 163 193 193 232 233 238 281 282 407 409 570 570 161 161 161 192 192 225 224 256 256 384 521 256 384 512 253 448 256 384 512)
+     local curves_hex=("00,01" "00,02" "00,03" "00,04" "00,05" "00,06" "00,07" "00,08" "00,09" "00,0a" "00,0b" "00,0c" "00,0d" "00,0e" "00,0f" "00,10" "00,11" "00,12" "00,13" "00,14" "00,15" "00,16" "00,17" "00,18" "00,19" "00,1a" "00,1b" "00,1c" "00,1d" "00,1e" "00,1f" "00,20" "00,21" "00,22" "00,23" "00,24" "00,25" "00,26" "00,27" "00,28" "00,29")
+     local -a curves_ossl=("sect163k1" "sect163r1" "sect163r2" "sect193r1" "sect193r2" "sect233k1" "sect233r1" "sect239k1" "sect283k1" "sect283r1" "sect409k1" "sect409r1" "sect571k1" "sect571r1" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "prime192v1" "secp224k1" "secp224r1" "secp256k1" "prime256v1" "secp384r1" "secp521r1" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13" "GC256A" "GC256B" "GC256C" "GC256D" "GC512A" "GC512B" "GC512C" "SM2")
+     local -a curves_ossl_output=("K-163" "sect163r1" "B-163" "sect193r1" "sect193r2" "K-233" "B-233" "sect239k1" "K-283" "B-283" "K-409" "B-409" "K-571" "B-571" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "P-192" "secp224k1" "P-224" "secp256k1" "P-256" "P-384" "P-521" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13" "GC256A" "GC256B" "GC256C" "GC256D" "GC512A" "GC512B" "GC512C" "SM2")
+     local -ai curves_bits=(163 162 163 193 193 232 233 238 281 282 407 409 570 570 161 161 161 192 192 225 224 256 256 384 521 256 384 512 253 448 256 384 512 256 256 256 256 512 512 512 256)
      # Many curves have been deprecated, and RFC 8446, Appendix B.3.1.4, states
      # that these curves MUST NOT be offered in a TLS 1.3 ClientHello.
-     local -a curves_deprecated=("true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "false" "false" "false" "true" "true" "true" "false" "false" "false" "false" "false")
+     local -a curves_deprecated=("true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "false" "false" "false" "true" "true" "true" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false")
      local -a ffdhe_groups_hex=("01,00" "01,01" "01,02" "01,03" "01,04")
      local -a ffdhe_groups_output=("ffdhe2048" "ffdhe3072" "ffdhe4096" "ffdhe6144" "ffdhe8192")
      local -a supported_curve
@@ -10510,9 +10570,9 @@ run_fs() {
           for (( i=0; i < TLS_NR_CIPHERS; i++ )); do
                fs_cipher="${TLS_CIPHER_RFC_NAME[i]}"
                hexc="${TLS_CIPHER_HEXCODE[i]}"
-               if [[ "$fs_cipher" == "TLS_DHE_"* || "$fs_cipher" == "TLS_ECDHE_"* || "${hexc:2:2}" == "13" ]] && \
+               if [[ "$fs_cipher" == TLS_DHE_* || "$fs_cipher" == TLS_ECDHE_* || "${hexc:2:2},${hexc:7:2}" =~ $TLS13_CIPHERS_REGEX ]] && \
                   [[ ! "$fs_cipher" =~ NULL ]] && [[ ! "$fs_cipher" =~ DES ]] && [[ ! "$fs_cipher" =~ RC4 ]] && \
-                  [[ ! "$fs_cipher" =~ PSK ]] && { "$using_sockets" || "${TLS_CIPHER_OSSL_SUPPORTED[i]}"; }; then
+                  [[ ! "$fs_cipher" =~ PSK ]] && [[ "$fs_cipher" != TLS_SHA* ]] && { "$using_sockets" || "${TLS_CIPHER_OSSL_SUPPORTED[i]}"; }; then
                     fs_hex_cipher_list+=", ${hexc:2:2},${hexc:7:2}"
                     ciph[nr_supported_ciphers]="${TLS_CIPHER_OSSL_NAME[i]}"
                     rfc_ciph[nr_supported_ciphers]="${TLS_CIPHER_RFC_NAME[i]}"
@@ -10639,7 +10699,7 @@ run_fs() {
                     tls13_ciphers_to_test=""
                     for (( i=0; i < nr_supported_ciphers; i++ )); do
                          if ! "${ciphers_found[i]}" && "${ossl_supported[i]}"; then
-                              if [[ "${ciph[i]}" == TLS13* ]] || [[ "${ciph[i]}" == TLS_* ]] || [[ "${ciph[i]}" == AEAD-* ]]; then
+                              if [[ ":$TLS13_OSSL_CIPHERS:" =~ :${ciph[i]}: ]]; then
                                    tls13_ciphers_to_test+=":${ciph[i]}"
                               else
                                    ciphers_to_test+=":${ciph[i]}"
@@ -10666,7 +10726,7 @@ run_fs() {
                     done
                     [[ $i -eq $nr_supported_ciphers ]] && break
                     ciphers_found[i]=true
-                    if [[ "$fs_cipher" == TLS13* ]] || [[ "$fs_cipher" == TLS_* ]] || [[ "$fs_cipher" == AEAD-* ]]; then
+                    if [[ ":$TLS13_OSSL_CIPHERS:" =~ :${fs_cipher}: ]]; then
                          fs_tls13_offered=true
                          "$WIDE" && kx[i]="$(read_dhtype_from_file $TMPFILE)"
                     elif [[ "$fs_cipher" == ECDHE-* ]]; then
@@ -10691,7 +10751,7 @@ run_fs() {
                               ! "${ciphers_found[i]}" && ciphers_to_test+=", ${hexcode[i]}"
                          done
                          [[ -z "$ciphers_to_test" ]] && break
-                         [[ "$proto" == "04" ]] && [[ ! "$ciphers_to_test" =~ ,\ 13,[0-9a-f][0-9a-f] ]] && break
+                         [[ "$proto" == "04" ]] && [[ ! "$ciphers_to_test" =~ ,\ ($TLS13_CIPHERS_REGEX) ]] && break
                          ciphers_to_test="$(strip_inconsistent_ciphers "$proto" "$ciphers_to_test")"
                          [[ -z "$ciphers_to_test" ]] && break
                          if "$WIDE" && "$SHOW_SIGALGO"; then
@@ -10736,12 +10796,12 @@ run_fs() {
                     fi
                     fs_ciphers+="$fs_cipher "
 
-                    if [[ "${ciph[i]}" == ECDHE-* ]] || [[ "${ciph[i]}" == TLS13* ]] || [[ "${ciph[i]}" == TLS_* ]] || \
-                       [[ "${ciph[i]}" == AEAD-* ]] || { "$using_sockets" && [[ "${rfc_ciph[i]}" == TLS_ECDHE_* ]]; }; then
+                    if [[ "${ciph[i]}" == ECDHE-* ]] || [[ ":$TLS13_OSSL_CIPHERS:" =~ :${ciph[i]}: ]] || \
+                       { "$using_sockets" && [[ "${rfc_ciph[i]}" == TLS_ECDHE_* ]]; }; then
                          ecdhe_offered=true
                          ecdhe_cipher_list_hex+=", ${hexcode[i]}"
                          if [[ "${ciph[i]}" != "-" ]]; then
-                              if  [[ "${ciph[i]}" == TLS13* ]] || [[ "${ciph[i]}" == TLS_* ]] || [[ "${ciph[i]}" == AEAD-* ]]; then
+                              if [[ ":$TLS13_OSSL_CIPHERS:" =~ :${ciph[i]}: ]]; then
                                    tls13_cipher_list+=":$fs_cipher"
                               else
                                    ecdhe_cipher_list+=":$fs_cipher"
@@ -10751,7 +10811,7 @@ run_fs() {
                     if [[ "${ciph[i]}" == "DHE-"* ]] || { "$using_sockets" && [[ "${rfc_ciph[i]}" == "TLS_DHE_"* ]]; }; then
                          ffdhe_offered=true
                          ffdhe_cipher_list_hex+=", ${hexcode[i]}"
-                    elif [[ "${ciph[i]}" == TLS13* ]] || [[ "${ciph[i]}" == TLS_* ]] || [[ "${ciph[i]}" == AEAD-* ]]; then
+                    elif [[ ":$TLS13_OSSL_CIPHERS:" =~ :${ciph[i]}: ]]; then
                          ffdhe_cipher_list_hex+=", ${hexcode[i]}"
                     fi
                fi
@@ -14405,6 +14465,17 @@ parse_tls_serverhello() {
                                          "0019") echo -n "secp521r1" >> $TMPFILE ;;
                                          "001D") echo -n "X25519" >> $TMPFILE ;;
                                          "001E") echo -n "X448" >> $TMPFILE ;;
+                                         "001F") echo -n "brainpoolP256r1tls13" >> $TMPFILE ;;
+                                         "0020") echo -n "brainpoolP384r1tls13" >> $TMPFILE ;;
+                                         "0021") echo -n "brainpoolP512r1tls13" >> $TMPFILE ;;
+                                         "0022") echo -n "GC256A" >> $TMPFILE ;;
+                                         "0023") echo -n "GC256B" >> $TMPFILE ;;
+                                         "0024") echo -n "GC256C" >> $TMPFILE ;;
+                                         "0025") echo -n "GC256D" >> $TMPFILE ;;
+                                         "0026") echo -n "GC512A" >> $TMPFILE ;;
+                                         "0027") echo -n "GC512B" >> $TMPFILE ;;
+                                         "0028") echo -n "GC512C" >> $TMPFILE ;;
+                                         "0029") echo -n "curveSM2" >> $TMPFILE ;;
                                          "0100") echo -n "ffdhe2048" >> $TMPFILE ;;
                                          "0101") echo -n "ffdhe3072" >> $TMPFILE ;;
                                          "0102") echo -n "ffdhe4096" >> $TMPFILE ;;
@@ -14500,6 +14571,14 @@ parse_tls_serverhello() {
                                     31) dh_bits=256 ; named_curve_str="brainpoolP256r1tls13" ; named_curve_oid="06092B2403030208010107" ;;
                                     32) dh_bits=384 ; named_curve_str="brainpoolP384r1tls13" ; named_curve_oid="06092B240303020801010B" ;;
                                     33) dh_bits=512 ; named_curve_str="brainpoolP512r1tls13" ; named_curve_oid="06092B240303020801010D" ;;
+                                    34) dh_bits=256 ; named_curve_str="GC256A" ; named_curve_oid="06092a8503070102010101" ;;
+                                    35) dh_bits=256 ; named_curve_str="GC256B" ; named_curve_oid="06072a850302022301" ;;
+                                    36) dh_bits=256 ; named_curve_str="GC256C" ; named_curve_oid="06072a850302022302" ;;
+                                    37) dh_bits=256 ; named_curve_str="GC256D" ; named_curve_oid="06072a850302022303" ;;
+                                    38) dh_bits=512 ; named_curve_str="GC512A" ; named_curve_oid="06092a8503070102010201" ;;
+                                    39) dh_bits=512 ; named_curve_str="GC512B" ; named_curve_oid="06092a8503070102010202" ;;
+                                    40) dh_bits=512 ; named_curve_str="GC512C" ; named_curve_oid="06092a8503070102010203" ;;
+                                    41) dh_bits=256 ; named_curve_str="curveSM2" ; named_curve_oid="06082a811ccf5501822d" ;;
                                     256) dh_bits=2048 ; named_curve_str="ffdhe2048" ;;
                                     257) dh_bits=3072 ; named_curve_str="ffdhe3072" ;;
                                     258) dh_bits=4096 ; named_curve_str="ffdhe4096" ;;
@@ -15011,6 +15090,13 @@ parse_tls_serverhello() {
                          28) dh_bits=512 ; named_curve_str="brainpoolP512r1" ;;
                          29) dh_bits=253 ; named_curve_str="X25519" ;;
                          30) dh_bits=448 ; named_curve_str="X448" ;;
+                         34) dh_bits=256 ; named_curve_str="GC256A" ;;
+                         35) dh_bits=256 ; named_curve_str="GC256B" ;;
+                         36) dh_bits=256 ; named_curve_str="GC256C" ;;
+                         37) dh_bits=256 ; named_curve_str="GC256D" ;;
+                         38) dh_bits=512 ; named_curve_str="GC512A" ;;
+                         39) dh_bits=512 ; named_curve_str="GC512B" ;;
+                         40) dh_bits=512 ; named_curve_str="GC512C" ;;
                     esac
                     if [[ "$DETECTED_TLS_VERSION" == 0303 ]]; then
                          # Skip over the public key to get to the SignatureAndHashAlgorithm
@@ -15461,10 +15547,19 @@ prepare_tls_clienthello() {
                          elif [[ "$part2" -ge 0xac ]] && [[ "$part2" -le 0xaf ]]; then
                               ecc_cipher_suite_found=true && break
                          fi
+                    elif [[ "$part1" == 0xc1 ]]; then
+                         if [[ "$part2" -le 0x02 ]]; then
+                              ecc_cipher_suite_found=true && break
+                         fi
                     elif [[ "$part1" == 0xcc ]]; then
                          if [[ "$part2" == 0xa8 ]] || [[ "$part2" == 0xa9 ]] || \
                             [[ "$part2" == 0xac ]] || [[ "$part2" == 0x13 ]] || \
                             [[ "$part2" == 0x14 ]]; then
+                              ecc_cipher_suite_found=true && break
+                         fi
+                    elif [[ "$part1" == 0xd0 ]]; then
+                         if [[ "$part2" == 0x01 ]] || [[ "$part2" == 0x02 ]] || \
+                            [[ "$part2" == 0x03 ]] || [[ "$part2" == 0x05 ]]; then
                               ecc_cipher_suite_found=true && break
                          fi
                     fi
@@ -15492,17 +15587,20 @@ prepare_tls_clienthello() {
           if [[ 0x$tls_low_byte -le 0x03 ]]; then
                extension_signature_algorithms="
                00, 0d,                    # Type: signature_algorithms , see RFC 5246 and RFC 8422
-               00, 30, 00,2e,             # lengths
+               00, 34, 00,32,             # lengths
                06,01, 06,02, 06,03, 05,01, 05,02, 05,03, 04,01, 04,02, 04,03,
                03,01, 03,02, 03,03, 02,01, 02,02, 02,03,
-               08,04, 08,05, 08,06, 08,07, 08,08, 08,09, 08,0a, 08,0b"
+               08,04, 08,05, 08,06, 08,07, 08,08, 08,09, 08,0a, 08,0b
+               08,40, 08,41"
           else
                extension_signature_algorithms="
                00, 0d,                    # Type: signature_algorithms , see RFC 8446
-               00, 22, 00, 20,            # lengths
+               00, 38, 00, 36,            # lengths
                04,03, 05,03, 06,03, 08,04, 08,05, 08,06,
                04,01, 05,01, 06,01, 08,09, 08,0a, 08,0b,
-               08,07, 08,08, 02,01, 02,03"
+               08,07, 08,08, 02,01, 02,03, 07,08, 07,09,
+               07,0a, 07,0b, 07,0c, 07,0d, 07,0e, 07,0f,
+               08,1a, 08,1b, 08,1c"
           fi
 
           extension_heartbeat="
@@ -15520,23 +15618,25 @@ prepare_tls_clienthello() {
           if "$ecc_cipher_suite_found"; then
                # Supported Groups Extension
                extension_supported_groups="
-               00, 0a,                    # Type: Supported Elliptic Curves , see RFC 4492
-               00, 42, 00, 40,            # lengths
-               00, 0e, 00, 0d, 00, 19, 00, 1c, 00, 1e, 00, 0b, 00, 0c, 00, 1b,
-               00, 18, 00, 09, 00, 0a, 00, 1a, 00, 16, 00, 17, 00, 1d, 00, 08,
-               00, 06, 00, 07, 00, 14, 00, 15, 00, 04, 00, 05, 00, 12, 00, 13,
-               00, 01, 00, 02, 00, 03, 00, 0f, 00, 10, 00, 11, 01, 00, 01, 01"
+               00,0a,                   # Type: Supported Elliptic Curves , see RFC 4492
+               00,50, 00,4e,            # lengths
+               00,0e, 00,0d, 00,19, 00,1c, 00,1e, 00,0b, 00,0c, 00,1b,
+               00,18, 00,09, 00,0a, 00,1a, 00,16, 00,17, 00,1d, 00,08,
+               00,06, 00,07, 00,14, 00,15, 00,04, 00,05, 00,12, 00,13,
+               00,01, 00,02, 00,03, 00,0f, 00,10, 00,11, 00,22, 00,23,
+               00,24, 00,25, 00,26, 00,27, 00,28, 01,00, 01,01"
           elif [[ 0x$tls_low_byte -gt 0x03 ]]; then
                # Supported Groups Extension
                if [[ ! "$process_full" =~ all ]] || { "$HAS_X25519" && "$HAS_X448"; }; then
                     extension_supported_groups="
                     00,0a,                      # Type: Supported Groups, see RFC 8446
-                    00,16, 00,14,               # lengths
+                    00,26, 00,24,               # lengths
                     00,1d, 00,17, 00,1e, 00,18, 00,19, 00,1f, 00,20, 00,21,
+                    00,22, 00,23, 00,24, 00,25, 00,26, 00,27, 00,28, 00,29,
                     01,00, 01,01"
-                    # OpenSSL prior to 1.1.1 does not support X448, so list it as the least
-                    # preferred option if the response needs to be decrypted, and do not
-                    # list it at all if the response MUST be decrypted.
+                    # List unsupported curves as the least options if the response
+                    # needs to be decrypted, and do not list them at all if the
+                    # response MUST be decrypted.
                elif "$HAS_X25519" && [[ "$process_full" == all+ ]]; then
                     extension_supported_groups="
                     00,0a,                      # Type: Supported Groups, see RFC 8446
@@ -15546,9 +15646,10 @@ prepare_tls_clienthello() {
                elif "$HAS_X25519"; then
                     extension_supported_groups="
                     00,0a,                      # Type: Supported Groups, see RFC 8446
-                    00,16, 00,14,               # lengths
-                    00,1d, 00,17, 00,18, 00,19, 00,1f, 00,20, 00,21,
-                    01,00, 01,01, 00,1e"
+                    00,26, 00,24,               # lengths
+                    00,1d, 00,17, 00,18, 00,19, 01,00, 01,01, 00,1e, 00,1f,
+                    00,20, 00,21, 00,22, 00,23, 00,24, 00,25, 00,26, 00,27,
+                    00,28, 00,29"
                     # OpenSSL prior to 1.1.0 does not support either X25519 or X448,
                     # so list them as the least referred options if the response
                     # needs to be decrypted, and do not list them at all if the
@@ -15562,9 +15663,10 @@ prepare_tls_clienthello() {
                else
                     extension_supported_groups="
                     00,0a,                      # Type: Supported Groups, see RFC 8446
-                    00,16, 00,14,               # lengths
-                    00,17, 00,18, 00,19, 00,1f, 00,20, 00,21,
-                    01,00, 01,01, 00,1d, 00,1e"
+                    00,26, 00,24,               # lengths
+                    00,17, 00,18, 00,19, 01,00, 01,01, 00,1d, 00,1e, 00,1f,
+                    00,20, 00,21, 00,22, 00,23, 00,24, 00,25, 00,26, 00,27,
+                    00,28, 00,29"
                fi
 
                code2network "$extension_supported_groups"
@@ -16083,7 +16185,7 @@ tls_sockets() {
           tls_hello_ascii="${tls_hello_ascii%%140303000101}"
 
           # Check if the response is a HelloRetryRequest.
-          original_clienthello="160301$(printf "%04x" "${#clienthello1}")$clienthello1"
+          original_clienthello="160301$(printf "%04x" "$((${#clienthello1}/2))")$clienthello1"
           resend_if_hello_retry_request "$original_clienthello" "$tls_hello_ascii"
           ret=$?
           if [[ $ret -eq 2 ]]; then
@@ -20782,7 +20884,7 @@ prepare_arrays() {
                          if [[ -n "$ossl_ciph" ]]; then
                               TLS_CIPHER_OSSL_SUPPORTED[i]=true
                               [[ "$ossl_ciph" != ${TLS_CIPHER_OSSL_NAME[i]} ]] && TLS_CIPHER_OSSL_NAME[i]="$ossl_ciph"
-                              [[ "${hexc:2:2}" == 13 ]] && TLS13_OSSL_CIPHERS+=":$ossl_ciph"
+                              [[ "${hexc:2:2},${hexc:7:2}" =~ $TLS13_CIPHERS_REGEX ]] && TLS13_OSSL_CIPHERS+=":$ossl_ciph"
                          fi
                     fi
                elif [[ $OSSL_VER_MAJOR -lt 1 ]]; then
