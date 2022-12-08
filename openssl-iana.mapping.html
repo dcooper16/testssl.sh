@@ -238,6 +238,10 @@ xB9  TLS_RSA_PSK_WITH_NULL_SHA384
 <tr><td> [0x1304]</td><td>   TLS_AES_128_CCM_SHA256       </td><td> ECDH     </td><td> AESCCM    </td><td> 128    </td><td> TLS_AES_128_CCM_SHA256     </td></tr>
 <tr><td> [0x1305]</td><td>   TLS_AES_128_CCM_8_SHA256     </td><td> ECDH     </td><td> AESCCM8  </td><td> 128    </td><td> TLS_AES_128_CCM_8_SHA256   </td></tr>
 
+<!-- draft-irtf-cfrg-aegis-aead -->
+<tr><td> [0x1306]</td><td>                                </td><td> ECDH     </td><td> AEGIS    </td><td> 256           </td><td> TLS_AEGIS_256_SHA384     </td></tr>
+<tr><td> [0x1307]</td><td>                                </td><td> ECDH     </td><td> AEGIS    </td><td> 128           </td><td> TLS_AEGIS_128L_SHA256    </td></tr>
+
 <!-- RFC 4492 -->
 <tr><td> [0xc001]</td><td>   ECDH-ECDSA-NULL-SHA          </td><td> ECDH/ECDSA</td><td>  Null    </td><td>  0            </td><td> TLS_ECDH_ECDSA_WITH_NULL_SHA            </td></tr>
 <tr><td> [0xc002]</td><td>   ECDH-ECDSA-RC4-SHA           </td><td> ECDH/ECDSA</td><td>  RC4     </td><td>  128          </td><td> TLS_ECDH_ECDSA_WITH_RC4_128_SHA         </td></tr>
@@ -429,11 +433,11 @@ xB9  TLS_RSA_PSK_WITH_NULL_SHA384
 <tr><td> [0xc0ae]</td><td>   ECDHE-ECDSA-AES128-CCM8      </td><td> ECDH     </td><td>   AESCCM  </td><td>  128          </td><td> TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8  </td></tr>
 <tr><td> [0xc0af]</td><td>   ECDHE-ECDSA-AES256-CCM8      </td><td> ECDH     </td><td>   AESCCM  </td><td>  256          </td><td> TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8  </td></tr>
 
-<!-- draft-camwinget-tls-ts13-macciphersuites -->
+<!-- RFC 9150 -->
 <tr><td> [0xc0b4]</td><td>          </td><td> ECDH     </td><td>   Null    </td><td>  0            </td><td>  TLS_SHA256_SHA256   </td></tr>
 <tr><td> [0xc0b5]</td><td>          </td><td> ECDH     </td><td>   Null    </td><td>  0            </td><td>  TLS_SHA384_SHA384   </td></tr>
 
-<!-- draft-smyshlyaev-tls12-gost-suites -->
+<!-- RFC 9189 -->
 <tr><td> [0xc100]</td><td>          </td><td> VKO GOST 34.10-2012    </td><td> Kuznyechik  </td><td>  256          </td><td> TLS_GOSTR341112_256_WITH_KUZNYECHIK_CTR_OMAC </td></tr>
 <tr><td> [0xc101]</td><td>          </td><td> VKO GOST 34.10-2012    </td><td> Magma       </td><td>  256          </td><td> TLS_GOSTR341112_256_WITH_MAGMA_CTR_OMAC </td></tr>
 <tr><td> [0xc102]</td><td>          </td><td> VKO GOST 34.10-2012    </td><td> GOST89      </td><td>  256          </td><td> TLS_GOSTR341112_256_WITH_28147_CNT_IMIT </td></tr>
