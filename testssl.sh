@@ -288,6 +288,7 @@ TMPFILE=""
 ERRFILE=""
 CLIENT_AUTH="none"
 CLIENT_AUTH_CA_LIST=""
+CLIENT_AUTH_SIGALGS_LIST=""
 TLS_TICKETS=false
 NO_SSL_SESSIONID=true
 CERT_COMPRESSION=${CERT_COMPRESSION:-false}  # secret flag to set in addition to --devel for certificate compression
@@ -10377,6 +10378,22 @@ run_server_defaults() {
                     i+=1
                done <<< "$CLIENT_AUTH_CA_LIST"
                fi
+          jsonID="clientAuth_sigalgs_list"
+          pr_bold " Sig Alg List for Client Auth "
+          if [[ -z "$(sed -e 's/[A-Za-z\-]*+SHA1//g' -e 's/[A-Za-z\-]*+MD5//g' -e 's/ //g' <<< "$CLIENT_AUTH_SIGALGS_LIST")" ]]; then
+               prln_svrty_critical "$(out_row_aligned_max_width "$CLIENT_AUTH_SIGALGS_LIST" "                              " $TERM_WIDTH)"
+               fileout "$jsonID" "CRITICAL" "$CLIENT_AUTH_SIGALGS_LIST"
+          else
+               out_row_aligned_max_width_by_entry "$CLIENT_AUTH_SIGALGS_LIST" "                              " $TERM_WIDTH pr_sigalg_quality
+               outln
+               if [[ "$CLIENT_AUTH_SIGALGS_LIST" =~ MD5 ]]; then
+                    fileout "$jsonID" "HIGH" "$CLIENT_AUTH_SIGALGS_LIST"
+               elif [[ "$CLIENT_AUTH_SIGALGS_LIST" =~ SHA1 ]]; then
+                    fileout "$jsonID" "LOW" "$CLIENT_AUTH_SIGALGS_LIST"
+               else
+                    fileout "$jsonID" "INFO" "$CLIENT_AUTH_SIGALGS_LIST"
+               fi
+          fi
      fi
 
 
@@ -21644,9 +21661,9 @@ print_dn() {
 extract_calist() {
      local response="$1"
      local is_tls12=false is_tls13=false
-     local certreq calist="" certtypes sigalgs dn
-     local calist_string=""
-     local -i len type
+     local certreq calist="" certtypes sigalgs="" dn
+     local calist_string="" sigalgs_string=""
+     local -i len len2 type
 
      # Determine whether this is a TLS 1.2 or TLS 1.3 response, since the information
      # is encoded in a different place for TLS 1.3 and the CertificateRequest message
@@ -21678,12 +21695,16 @@ extract_calist() {
                [[ -z "$certreq" ]] && break
                type=$(hex2dec "${certreq:0:4}")
                len=2*$(hex2dec "${certreq:4:4}")
-               if [[ $type -eq 47 ]]; then
+               if [[ $type -eq 13 ]]; then
+                    # This is the signature_algorithms extension
+                    sigalgs="${certreq:8:len}"
+                    len2=2*$(hex2dec "${sigalgs:0:4}")
+                    sigalgs="${sigalgs:4:len2}"
+               elif [[ $type -eq 47 ]]; then
                     # This is the certificate_authorities extension
                     calist="${certreq:8:len}"
-                    len=2*$(hex2dec "${calist:0:4}")
-                    calist="${calist:4:len}"
-                    break
+                    len2=2*$(hex2dec "${calist:0:4}")
+                    calist="${calist:4:len2}"
                fi
                certreq="${certreq:$((len+8))}"
           done
@@ -21714,7 +21735,40 @@ extract_calist() {
           calist="${calist:$((len+4))}"
      done
      [[ -z "$calist_string" ]] && calist_string="empty"
-     tm_out "$calist_string"
+     CLIENT_AUTH_CA_LIST="$(safe_echo "$calist_string")"
+     while true; do
+          [[ -z "$sigalgs" ]] && break
+          case "${sigalgs:0:4}" in
+               0101) sigalgs_string+=" RSA+MD5" ;;
+               0102) sigalgs_string+=" DSA+MD5" ;;
+               0103) sigalgs_string+=" ECDSA+MD5" ;;
+               0201) sigalgs_string+=" RSA+SHA1" ;;
+               0202) sigalgs_string+=" DSA+SHA1" ;;
+               0203) sigalgs_string+=" ECDSA+SHA1" ;;
+               0301) sigalgs_string+=" RSA+SHA224" ;;
+               0302) sigalgs_string+=" DSA+SHA224" ;;
+               0303) sigalgs_string+=" ECDSA+SHA224" ;;
+               0401|0420) sigalgs_string+=" RSA+SHA256" ;;
+               0402) sigalgs_string+=" DSA+SHA256" ;;
+               0403|081a) sigalgs_string+=" ECDSA+SHA256" ;;
+               0501|0520) sigalgs_string+=" RSA+SHA384" ;;
+               0502) sigalgs_string+=" DSA+SHA384" ;;
+               0503|081b) sigalgs_string+=" ECDSA+SHA384" ;;
+               0601|0620) sigalgs_string+=" RSA+SHA512" ;;
+               0602) sigalgs_string+=" DSA+SHA512" ;;
+               0603|081c) sigalgs_string+=" ECDSA+SHA512" ;;
+               0708) sigalgs_string+=" SM2+SM3" ;;
+               0804|0809) sigalgs_string+=" RSA-PSS+SHA256" ;;
+               0805|080a) sigalgs_string+=" RSA-PSS+SHA384" ;;
+               0806|080b) sigalgs_string+=" RSA-PSS+SHA512" ;;
+               0807) sigalgs_string+=" Ed25519" ;;
+               0808) sigalgs_string+=" Ed448" ;;
+               *) sigalgs_string+=" unknown(${sigalgs:0:4})";;
+          esac
+          sigalgs="${sigalgs:4}"
+     done
+     CLIENT_AUTH_SIGALGS_LIST="${sigalgs_string:1} "
+     [[ -z "$CLIENT_AUTH_SIGALGS_LIST" ]] && CLIENT_AUTH_SIGALGS_LIST="empty "
      return 0
 }
 
@@ -21745,7 +21799,7 @@ sclient_auth() {
                # CertificateRequest message in -msg
                CLIENT_AUTH="required"
                [[ $1 -eq 0 ]] && CLIENT_AUTH="optional"
-               CLIENT_AUTH_CA_LIST="$(extract_calist "$server_hello")"
+               extract_calist "$server_hello"
                return 0
           fi
           [[ $1 -eq 0 ]] && return 0
