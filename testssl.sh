@@ -1223,6 +1223,10 @@ set_key_str_score() {
           if [[ $size -lt 4032 ]] && [[ $KEY_EXCH_SCORE -ge 90 ]]; then
                KEY_EXCH_SCORE=90
           fi
+     elif [[ $type == SLH-DSA ]]; then
+          if [[ $size -lt 48 ]] && [[ $KEY_EXCH_SCORE -ge 90 ]]; then
+               KEY_EXCH_SCORE=90
+          fi
      fi
      return 0
 }
@@ -8700,7 +8704,7 @@ get_server_certificate() {
      # For TLS 1.3, the way to indicate what type of certificate the server should use is through the signature_algorithms/-cert extension.
      # So, for TLS 1.3 connections, the -sigalgs option is used with $OPENSSL and an appropriate signature_algorithms (0x0d) extension
      # is provided to tls_sockets().
-     #      The return 1 if $1 is neither tls_1_3_RSA nor tls_1_3_ECDSA is unnecessary. That would only happen if there were a bug in the
+     #      The return 1 if $1 is not one of the listed values is unnecessary. That would only happen if there were a bug in the
      # code. For example, if someone added another certificate type (e.g., FN-DSA) to run_server_defaults(), but forgot to add corresponding
      # code to get_server_certificate().
 
@@ -8742,6 +8746,8 @@ get_server_certificate() {
                     tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,08,00,06,09,04,09,05,09,06"
                elif [[ "$1" =~ tls1_3_SM2 ]]; then
                     tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,04,00,02,07,08"
+               elif [[ "$1" =~ tls1_3_SLHDSA ]]; then
+                    tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,1a,00,18,09,11,09,12,09,13,09,14,09,15,09,16,09,17,09,18,09,19,09,1a,09,1b,09,1c"
                else
                     return 1
                fi
@@ -9436,6 +9442,8 @@ certificate_transparency() {
                     extra_extns=", 00,0d,00,06,00,04,08,07,08,08"
                elif [[ "$cipher" == tls1_3_MLDSA ]]; then
                     extra_extns=", 00,0d,00,08,00,06,09,04,09,05,09,06"
+               elif [[ "$cipher" == tls1_3_SLHDSA ]]; then
+                    extra_extns=", 00,0d,00,1a,00,18,09,11,09,12,09,13,09,14,09,15,09,16,09,17,09,18,09,19,09,1a,09,1b,09,1c"
                else
                     return 1
                fi
@@ -9648,6 +9656,18 @@ certificate_info() {
           2.16.840.1.101.3.4.3.17|ML-DSA-44) cert_key_algo="ML-DSA-44"; cert_keysize=2560 ;;
           2.16.840.1.101.3.4.3.18|ML-DSA-65) cert_key_algo="ML-DSA-65"; cert_keysize=4032 ;;
           2.16.840.1.101.3.4.3.19|ML-DSA-87) cert_key_algo="ML-DSA-87"; cert_keysize=4896 ;;
+          2.16.840.1.101.3.4.3.20|SLH-DSA-SHA2-128s) cert_key_algo="SLH-DSA-SHA2-128s"; cert_keysize=32 ;;
+          2.16.840.1.101.3.4.3.21|SLH-DSA-SHA2-128f) cert_key_algo="SLH-DSA-SHA2-128f"; cert_keysize=32 ;;
+          2.16.840.1.101.3.4.3.22|SLH-DSA-SHA2-192s) cert_key_algo="SLH-DSA-SHA2-192s"; cert_keysize=48 ;;
+          2.16.840.1.101.3.4.3.23|SLH-DSA-SHA2-192f) cert_key_algo="SLH-DSA-SHA2-192f"; cert_keysize=48 ;;
+          2.16.840.1.101.3.4.3.24|SLH-DSA-SHA2-256s) cert_key_algo="SLH-DSA-SHA2-256s"; cert_keysize=64 ;;
+          2.16.840.1.101.3.4.3.25|SLH-DSA-SHA2-256f) cert_key_algo="SLH-DSA-SHAKE-256f"; cert_keysize=64 ;;
+          2.16.840.1.101.3.4.3.26|SLH-DSA-SHAKE-128s) cert_key_algo="SLH-DSA-SHAKE-128s"; cert_keysize=32 ;;
+          2.16.840.1.101.3.4.3.27|SLH-DSA-SHAKE-128f) cert_key_algo="SLH-DSA-SHAKE-128f"; cert_keysize=32 ;;
+          2.16.840.1.101.3.4.3.28|SLH-DSA-SHAKE-192s) cert_key_algo="SLH-DSA-SHAKE-192s"; cert_keysize=48 ;;
+          2.16.840.1.101.3.4.3.29|SLH-DSA-SHAKE-192f) cert_key_algo="SLH-DSA-SHAKE-192f"; cert_keysize=48 ;;
+          2.16.840.1.101.3.4.3.30|SLH-DSA-SHAKE-256s) cert_key_algo="SLH-DSA-SHAKE-256s"; cert_keysize=64 ;;
+          2.16.840.1.101.3.4.3.31|SLH-DSA-SHAKE-256f) cert_key_algo="SLH-DSA-SHAKE-256f"; cert_keysize=64 ;;
      esac
 
      out "$indent" ; pr_bold " Signature Algorithm          "
@@ -9793,7 +9813,7 @@ certificate_info() {
                *)                       pr_fixme "don't know $cert_key_algo "
                                         ((ret++)) ;;
           esac
-          if [[ $short_keyAlgo != EdDSA ]] && [[ $short_keyAlgo != ML-DSA ]]; then
+          if [[ $short_keyAlgo != EdDSA ]] && [[ $short_keyAlgo != ML-DSA ]] && [[ $short_keyAlgo != SLH-DSA ]]; then
                out "$short_keyAlgo "
           fi
           # https://tools.ietf.org/html/rfc4492,  https://www.keylength.com/en/compare/
@@ -9852,7 +9872,7 @@ certificate_info() {
                fi
 
                set_key_str_score "$short_keyAlgo" "$cert_keysize"
-          elif [[ $cert_key_algo == Ed* ]] || [[ $cert_key_algo == ML-DSA* ]]; then
+          elif [[ $cert_key_algo == Ed* ]] || [[ $cert_key_algo == ML-DSA* ]] || [[ $cert_key_algo == SLH-DSA* ]]; then
                pr_svrty_good "$cert_key_algo"
                json_rating="OK"; json_msg="$short_keyAlgo $cert_key_algo"
                set_key_str_score "$short_keyAlgo" "$cert_keysize"
@@ -10723,13 +10743,15 @@ run_server_defaults() {
      ciphers_to_test[10]="tls1_3_EdDSA"
      ciphers_to_test[11]="tls1_3_MLDSA"
      ciphers_to_test[12]="tls1_3_SM2"
+     ciphers_to_test[13]="tls1_3_SLHDSA"
      certificate_type[1]="" ; certificate_type[2]=""
      certificate_type[3]=""; certificate_type[4]=""
      certificate_type[5]="" ; certificate_type[6]=""
      certificate_type[7]="" ; certificate_type[8]="RSASig"
      certificate_type[9]="ECDSA" ; certificate_type[10]="EdDSA"
      certificate_type[11]="MLDSA" ; certificate_type[12]="SM2"
-     nr_cert_types=12
+     certificate_type[13]="SLHDSA"
+     local -i nr_cert_types=13
 
      if "$SERVER_SIZE_LIMIT_BUG"; then
           ciphers_to_test[3]="aDSS:aDH:aECDH"
@@ -11263,10 +11285,10 @@ run_fs() {
      local -a ffdhe_groups_hex=("01,00" "01,01" "01,02" "01,03" "01,04")
      local -a ffdhe_groups_output=("ffdhe2048" "ffdhe3072" "ffdhe4096" "ffdhe6144" "ffdhe8192")
      local -a supported_curve
-     local -a sigalgs_hex=("01,01" "01,02" "01,03" "02,01" "02,02" "02,03" "03,01" "03,02" "03,03" "04,01" "04,02" "04,03" "04,20" "05,01" "05,02" "05,03" "05,20" "06,01" "06,02" "06,03" "06,20" "07,08" "08,04" "08,05" "08,06" "08,07" "08,08" "08,09" "08,0a" "08,0b" "08,1a" "08,1b" "08,1c" "09,04" "09,05" "09,06")
-     local -a sigalgs_strings=("RSA+MD5" "DSA+MD5" "ECDSA+MD5" "RSA+SHA1" "DSA+SHA1" "ECDSA+SHA1" "RSA+SHA224" "DSA+SHA224" "ECDSA+SHA224" "RSA+SHA256" "DSA+SHA256" "ECDSA+SHA256" "RSA+SHA256" "RSA+SHA384" "DSA+SHA384" "ECDSA+SHA384" "RSA+SHA384" "RSA+SHA512" "DSA+SHA512" "ECDSA+SHA512" "RSA+SHA512" "sm2sig_sm3" "RSA-PSS-RSAE+SHA256" "RSA-PSS-RSAE+SHA384" "RSA-PSS-RSAE+SHA512" "Ed25519" "Ed448" "RSA-PSS-PSS+SHA256" "RSA-PSS-PSS+SHA384" "RSA-PSS-PSS+SHA512" "ECDSA-BRAINPOOL+SHA256" "ECDSA-BRAINPOOL+SHA384" "ECDSA-BRAINPOOL+SHA512" "ML-DSA-44" "ML-DSA-65" "ML-DSA-87")
-     local -a tls13_supported_sigalgs=("false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false")
-     local -a tls12_supported_sigalgs=("false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false")
+     local -a sigalgs_hex=("01,01" "01,02" "01,03" "02,01" "02,02" "02,03" "03,01" "03,02" "03,03" "04,01" "04,02" "04,03" "04,20" "05,01" "05,02" "05,03" "05,20" "06,01" "06,02" "06,03" "06,20" "07,08" "08,04" "08,05" "08,06" "08,07" "08,08" "08,09" "08,0a" "08,0b" "08,1a" "08,1b" "08,1c" "09,04" "09,05" "09,06" "09,11" "09,12" "09,13" "09,14" "09,15" "09,16" "09,17" "09,18" "09,19" "09,1a" "09,1b" "09,1c" )
+     local -a sigalgs_strings=("RSA+MD5" "DSA+MD5" "ECDSA+MD5" "RSA+SHA1" "DSA+SHA1" "ECDSA+SHA1" "RSA+SHA224" "DSA+SHA224" "ECDSA+SHA224" "RSA+SHA256" "DSA+SHA256" "ECDSA+SHA256" "RSA+SHA256" "RSA+SHA384" "DSA+SHA384" "ECDSA+SHA384" "RSA+SHA384" "RSA+SHA512" "DSA+SHA512" "ECDSA+SHA512" "RSA+SHA512" "sm2sig_sm3" "RSA-PSS-RSAE+SHA256" "RSA-PSS-RSAE+SHA384" "RSA-PSS-RSAE+SHA512" "Ed25519" "Ed448" "RSA-PSS-PSS+SHA256" "RSA-PSS-PSS+SHA384" "RSA-PSS-PSS+SHA512" "ECDSA-BRAINPOOL+SHA256" "ECDSA-BRAINPOOL+SHA384" "ECDSA-BRAINPOOL+SHA512" "ML-DSA-44" "ML-DSA-65" "ML-DSA-87" "SLH-DSA-SHA2-128s" "SLH-DSA-SHA2-128f" "SLH-DSA-SHA2-192s" "SLH-DSA-SHA2-192f" "SLH-DSA-SHA2-256s" "SLH-DSA-SHA2-256f" "SLH-DSA-SHAKE-128s" "SLH-DSA-SHAKE-128f" "SLH-DSA-SHAKE-192s" "SLH-DSA-SHAKE-192f" "SLH-DSA-SHAKE-256s" "SLH-DSA-SHAKE-256f")
+     local -a tls13_supported_sigalgs=("false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false")
+     local -a tls12_supported_sigalgs=("false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false")
      local rsa_cipher="" ecdsa_cipher="" dss_cipher=""
      local sigalgs_to_test tls12_supported_sigalg_list="" tls13_supported_sigalg_list=""
      local -i nr_supported_ciphers=0 nr_curves=0 nr_ossl_curves=0 i j low high
@@ -16375,11 +16397,24 @@ parse_tls_serverhello() {
           echo "Peer signature type: $peer_signature_type" >> $TMPFILE
           [[ $DEBUG -ge 3 ]] && echo -e "     Peer signature type:    $peer_signature_type\n"
      elif [[ 0x$peering_signing_digest -eq 9 ]] && \
-          [[ 0x$peer_signature_type -ge 4 ]] && [[ 0x$peer_signature_type -le 6 ]]; then
+          { [[ 0x$peer_signature_type -ge 4 && 0x$peer_signature_type -le 6 ]] ||
+            [[ 0x$peer_signature_type -ge 17 && 0x$peer_signature_type -le 28 ]]; }; then
           case $peer_signature_type in
                04) peering_signing_digest=""; peer_signature_type="ML-DSA-44" ;;
                05) peering_signing_digest=""; peer_signature_type="ML-DSA-65" ;;
                06) peering_signing_digest=""; peer_signature_type="ML-DSA-87" ;;
+               11) peering_signing_digest=""; peer_signature_type="SLH-DSA-SHA2-128s" ;;
+               12) peering_signing_digest=""; peer_signature_type="SLH-DSA-SHA2-128f" ;;
+               13) peering_signing_digest=""; peer_signature_type="SLH-DSA-SHA2-192s" ;;
+               14) peering_signing_digest=""; peer_signature_type="SLH-DSA-SHA2-192f" ;;
+               15) peering_signing_digest=""; peer_signature_type="SLH-DSA-SHA2-256s" ;;
+               16) peering_signing_digest=""; peer_signature_type="SLH-DSA-SHA2-256f" ;;
+               17) peering_signing_digest=""; peer_signature_type="SLH-DSA-SHAKE-128s" ;;
+               18) peering_signing_digest=""; peer_signature_type="SLH-DSA-SHAKE-128f" ;;
+               19) peering_signing_digest=""; peer_signature_type="SLH-DSA-SHAKE-192s" ;;
+               1A) peering_signing_digest=""; peer_signature_type="SLH-DSA-SHAKE-192f" ;;
+               1B) peering_signing_digest=""; peer_signature_type="SLH-DSA-SHAKE-256s" ;;
+               1C) peering_signing_digest=""; peer_signature_type="SLH-DSA-SHAKE-256f" ;;
           esac
           echo "Peer signature type: $peer_signature_type" >> $TMPFILE
           [[ $DEBUG -ge 3 ]] && echo -e "     Peer signature type:    $peer_signature_type\n"
@@ -16715,10 +16750,12 @@ prepare_tls_clienthello() {
           else
                extension_signature_algorithms="
                00, 0d,                    # Type: signature_algorithms , see RFC 8446
-               00, 30, 00, 2e,            # lengths
+               00, 48, 00, 46,            # lengths
                04,03, 05,03, 06,03, 08,04, 08,05, 08,06, 04,01, 05,01,
                06,01, 08,09, 08,0a, 08,0b, 08,07, 08,08, 02,01, 02,03,
-               07,08, 09,04, 09,05, 09,06, 08,1a, 08,1b, 08,1c"
+               07,08, 09,04, 09,05, 09,06, 08,1a, 08,1b, 08,1c, 09,11,
+               09,12, 09,13, 09,14, 09,15, 09,16, 09,17, 09,18, 09,19,
+               09,1a, 09,1b, 09,1c"
           fi
 
           extension_heartbeat="
