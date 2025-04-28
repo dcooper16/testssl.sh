@@ -418,6 +418,7 @@
         this.</p>
         <p><code>--rating-only</code> makes testssl.sh do the bare
         minimum to allow rating to succeed. See RATING for more</p>
+        <p><code>--nist</code> indicates that testing should check for conformance to the recommendations of the U.S. National Institute of Standards and Technology (NIST), including NIST Special Publication (SP) 800-53 Revision 2 and SP 800-56A Revision 3. This switch will affect, for example, the ratings that are applied to cipher suites. NIST is the environment variable for this which needs to be set to true if you want this.</p>
         <h3 id="single-check-options">SINGLE CHECK OPTIONS</h3>
         <p>Any single check switch supplied as an argument prevents
         testssl.sh from doing a default run. It just takes this and if
