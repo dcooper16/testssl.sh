@@ -158,6 +158,8 @@ The same can be achieved by setting the environment variable `WARNINGS`.
 
 `--rating-only` makes testssl.sh do the bare minimum to allow rating to succeed. See RATING for more
 
+`--nist` indicates that testing should check for conformance to the recommendations of the U.S. National Institute of Standards and Technology (NIST), including NIST Special Publication (SP) 800-53 Revision 2 and SP 800-56A Revision 3. This switch will affect, for example, the ratings that are applied to cipher suites. NIST is the environment variable for this which needs to be set to true if you want this.
+
 ### SINGLE CHECK OPTIONS
 
 Any single check switch supplied as an argument prevents testssl.sh from doing a default run. It just takes this and if supplied other options and runs them - in the order they would also appear in the default run.
