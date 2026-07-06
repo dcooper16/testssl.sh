@@ -22893,7 +22893,7 @@ get_https_rrecord() {
           # empty if there's no such record
      else
           return 6
-          # No dig, drill, host, or nslookup --> complaint hould have been before already
+          # No dig, drill, host, or nslookup --> complaint should have been before already
      fi
      OPENSSL_CONF="$saved_openssl_conf"      # We're done now with openssl, see https://github.com/drwetter/testssl.sh/issues/134
 
