@@ -22817,6 +22817,7 @@ get_caa_rrecord() {
 # https://www.rfc-editor.org/rfc/rfc9460.html
 #    arg1: domain to check for
 #    returns: string for record
+#    return value: !=0 if error encountered
 #
 get_https_rrecord() {
      local raw_https=""
@@ -22891,13 +22892,13 @@ get_https_rrecord() {
           raw_https="$(strip_lf "$(nslookup -type=type65 "$1" | awk '/'"^${1}"'.*rdata_65/ { print substr($0,index($0,$4)) }' )")"
           # empty if there's no such record
      else
-          return 1
-          # No dig, drill, host, or nslookup --> complaint was elsewhere already
+          return 6
+          # No dig, drill, host, or nslookup --> complaint should have been before already
      fi
      OPENSSL_CONF="$saved_openssl_conf"      # We're done now with openssl, see https://github.com/drwetter/testssl.sh/issues/134
 
      if [[ -z "$raw_https" ]]; then
-          return 1
+          return 0
      fi
 
      # Now comes the third, tricky part (old dig for Macs e.g.) --> parsing the hex stream which was returned if it was returned.
@@ -23996,6 +23997,7 @@ dns_https_rr () {
           if [[ $? -ne 0 ]]; then
                prln_warning "$HTTPS_RR"
                fileout "${jsonID}" "WARN" "$HTTPS_RR"
+               return 1
           elif [[ -n "$HTTPS_RR" ]]; then
                pr_svrty_good "yes" ; out ": "
                prln_italic "$(out_row_aligned_max_width "$HTTPS_RR" "$indent                              " $TERM_WIDTH)"
@@ -24005,6 +24007,7 @@ dns_https_rr () {
                fileout "${jsonID}" "INFO" " no resource record found"
           fi
      fi
+     return 0
 }
 
 
