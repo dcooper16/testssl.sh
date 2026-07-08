@@ -14738,7 +14738,7 @@ sym-encrypt() {
           return 7
      fi
      [[ $? -ne 0 ]] && return 7
-     [[ -n "$ciphertext" ]] && return 7
+     [[ -z "$ciphertext" ]] && return 7
 
      tm_out "$(strip_spaces "$ciphertext")"
      return 0
