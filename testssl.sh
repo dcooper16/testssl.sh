@@ -14553,7 +14553,7 @@ gcm-decrypt() {
      elif [[ "$cipher" == TLS_AES_256_GCM_SHA384 ]] && ! "$compute_tag"; then
           if "$HAS_AES256_GCM"; then
                plaintext="$(hex2binary "$ciphertext" | $OPENSSL enc -aes-256-gcm -K "$key" -iv "$nonce" 2>/dev/null | hexdump -v -e '16/1 "%02X"')"
-               aesgcm_used=true
+               enc_aesgcm_used=true
           elif "$HAS2_AES256_GCM"; then
                # empty  OPENSSL_CONF temporarily as it might cause problems, see #2780
                plaintext="$(hex2binary "$ciphertext" | OPENSSL_CONF='' $OPENSSL2 enc -aes-256-gcm -K "$key" -iv "$nonce" 2>/dev/null | hexdump -v -e '16/1 "%02X"')"
