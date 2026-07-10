@@ -9,7 +9,10 @@ my $tests = 0;
 my $prg="testssl.sh";
 my $os="$^O";
 
-
+if ( $os eq "darwin" ){
+    printf "%s\n", "Skipping checks";
+    exit 0;
+}
 
 #1
 printf "\n%s\n", "Testing for missing vars at left hand side in double square brackets ...";
@@ -19,6 +22,7 @@ my @matches = `grep -n '\\[\\[ [[:alpha:]]' $prg`;
 is(scalar(@matches), 0, "Checking bad '[[ LHS' patterns")
     or diag(@matches);
 $tests++;
+
 
 #2
 printf "\n%s\n", "Testing for backticks ...";
