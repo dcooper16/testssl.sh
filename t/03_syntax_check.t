@@ -7,7 +7,9 @@ use Test::More;
 
 my $tests = 0;
 my $prg="testssl.sh";
-# Patterns used to trigger an error:
+my $os="$^O";
+
+
 
 #1
 printf "\n%s\n", "Testing for missing vars at left hand side in double square brackets ...";
@@ -17,7 +19,36 @@ my @matches = `grep -n '\\[\\[ [[:alpha:]]' $prg`;
 is(scalar(@matches), 0, "Checking bad '[[ LHS' patterns")
     or diag(@matches);
 $tests++;
-i
+
+#2
+printf "\n%s\n", "Testing for backticks ...";
+
+my @matches = qx(grep -nP '`[^`]*`' $prg);
+is(scalar(@matches), 0, "Checking bad backtick patterns")
+or diag(@matches);
+$tests++;
+
+#3
+printf "\n%s\n", "Sourcing without checking the file exists #1 ...";
+
+my @matches = qx(grep -nP '^\s*\.\s+\$' $prg);
+is(scalar(@matches), 0, "Checking bad sourcing pattern #1")
+or diag(@matches);
+$tests++;
+
+#4
+printf "\n%s\n", "Sourcing without checking the file exists #2 ...";
+
+my @matches = qx(grep -nP '^\s*source\s+\$' $prg);
+is(scalar(@matches), 0, "Checking bad sourcing pattern #2")
+or diag(@matches);
+$tests++;
+
+
+# We have three eval already, a) re-analyse + exempt them
+#my @matches = qx(grep -nP '\beval\b' $prg);
+
+
 
 # more would go here
 
