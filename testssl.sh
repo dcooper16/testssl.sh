@@ -21624,7 +21624,7 @@ find_openssl_binary() {
      grep -Eq 'xmpp-server|xmpp\[-server\]' $s_client_starttls_has && HAS_XMPP_SERVER=true
 
      # Seems like LibreSSL on MacOS somehow lost this with 26.5.2?
-     grep -q 'ldap' $s_client_has && HAS_LDAP=false
+     grep -q 'ldap' $s_client_starttls_has && HAS_LDAP=true
      grep -q 'postgres' $s_client_starttls_has && HAS_POSTGRES=true
      grep -q 'mysql' $s_client_starttls_has && HAS_MYSQL=true
      grep -q 'lmtp' $s_client_starttls_has && HAS_LMTP=true
