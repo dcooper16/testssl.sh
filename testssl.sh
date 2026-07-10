@@ -361,6 +361,7 @@ HAS_ALPN=false
 HAS_NPN=false
 HAS_FALLBACK_SCSV=false
 HAS_PROXY=false
+HAS_LDAP=false
 HAS_XMPP=false
 HAS_XMPP_SERVER=false
 HAS_POSTGRES=false
@@ -21486,6 +21487,7 @@ find_openssl_binary() {
      HAS_NPN=false
      HAS_FALLBACK_SCSV=false
      HAS_PROXY=false
+     HAS_LDAP=false
      HAS_XMPP=false
      HAS_XMPP_SERVER=false
      HAS_XMPP_SERVER2=false
@@ -21621,6 +21623,8 @@ find_openssl_binary() {
      grep -q 'xmpp' $s_client_starttls_has && HAS_XMPP=true
      grep -Eq 'xmpp-server|xmpp\[-server\]' $s_client_starttls_has && HAS_XMPP_SERVER=true
 
+     # Seems like LibreSSL on MacOS somehow lost this with 26.5.2?
+     grep -q 'ldap' $s_client_has && HAS_LDAP=false
      grep -q 'postgres' $s_client_starttls_has && HAS_POSTGRES=true
      grep -q 'mysql' $s_client_starttls_has && HAS_MYSQL=true
      grep -q 'lmtp' $s_client_starttls_has && HAS_LMTP=true
@@ -24091,7 +24095,7 @@ determine_service() {
                               if "$HAS_XMPP"; then
                                    # small hack -- instead of changing calls all over the place
                                    STARTTLS="$STARTTLS -xmpphost $NODE"
-                              else
+                              llelse
                                    # If the XMPP name cannot be provided using -xmpphost,
                                    # then it needs to be provided to the -connect option
                                    NODEIP="$NODE"
@@ -24100,6 +24104,11 @@ determine_service() {
                          if [[ "$protocol" == xmpp-server ]] && ! "$HAS_XMPP_SERVER"; then
                               #FIXME: make use of HAS_XMPP_SERVER2
                               fatal "Your $OPENSSL does not support the \"-starttls xmpp-server\" option" $ERR_OSSLBIN
+                         fi
+                    elif [[ "$protocol" == ldap ]]; then
+                         # Check if openssl version supports postgres.
+                         if ! "$HAS_LDAP"; then
+                              fatal "Your $OPENSSL does not support the \"-starttls ldap\" option" $ERR_OSSLBIN
                          fi
                     elif [[ "$protocol" == postgres ]]; then
                          # Check if openssl version supports postgres.
