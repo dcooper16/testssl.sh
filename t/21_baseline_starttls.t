@@ -122,7 +122,7 @@ $socket_out =~ s/ error querying OCSP responder .*\n//g;
 unlike($socket_out, qr/$socket_regex_bl/, "");
 $tests++;
 
-# /usr/bin/openssl on MacOS doesn't seem to be availabe (anymore)
+# /usr/bin/openssl on MacOS doesn't seem to be available (anymore)
 if ( $os ne "darwin" ){
      #7
      # https://ldapwiki.com/wiki/Public%20LDAP%20Servers
