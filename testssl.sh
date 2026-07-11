@@ -447,7 +447,7 @@ KEY_EXCH_SCORE=100                      # Keeps track of the score for category 
 CIPH_STR_BEST=0                         # Keeps track of the best bit size for category 3 "Cipher Strength"
 CIPH_STR_WORST=100000                   # Keeps track of the worst bit size for category 3 "Cipher Strength"
                                         # Intentionally set very high, so it can be set to 0, if necessary
-TRUSTED1ST=""                           # Contains the `-trusted_first` flag, if this version of openssl supports it
+TRUSTED1ST=""                           # Contains the "-trusted_first" flag, if this version of openssl supports it
 
 ########### Global variables for parallel mass testing
 #
@@ -18419,7 +18419,7 @@ run_renego() {
                tmp_result=2
                rm -f $TEMPDIR/was_killed
           fi
-          if [[ $tmp_result -eq 1 ]] && [[ loop_reneg -eq 1 ]]; then
+          if [[ $tmp_result -eq 1 ]] && [[ $loop_reneg -eq 1 ]]; then
                tmp_result=3
           fi
           if [[ $SERVICE != HTTP ]]; then
@@ -19630,7 +19630,7 @@ run_drown() {
      if [[ $(has_server_protocol ssl2) -ne 1 ]]; then
           sslv2_sockets
      else
-          [[ aaa == bbb ]]    # provoke return code=1
+          false
      fi
 
      case $? in
