@@ -10,9 +10,7 @@ my $prg="testssl.sh";
 my $os="$^O";
 
 if ( $os eq "darwin" ){
-     printf "%s\n", "Skipping checks on MacOS";
-     printf "\n";
-     done_testing($tests);
+     plan skip_all => 'No checks on MacOS';
 }
 
 #1
