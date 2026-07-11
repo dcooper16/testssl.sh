@@ -10,8 +10,9 @@ my $prg="testssl.sh";
 my $os="$^O";
 
 if ( $os eq "darwin" ){
-    printf "%s\n", "Skipping checks";
-    exit 0;
+     printf "%s\n", "Skipping checks on MacOS";
+     printf "\n";
+     done_testing($tests);
 }
 
 #1
@@ -23,6 +24,7 @@ is(scalar(@matches), 0, "Checking bad '[[ LHS' patterns")
     or diag(@matches);
 $tests++;
 
+# The following works only on GNU grep
 
 #2
 printf "\n%s\n", "Testing for backticks ...";
@@ -51,7 +53,6 @@ $tests++;
 
 # We have three eval already, a) re-analyse + exempt them
 #my @matches = qx(grep -nP '\beval\b' $prg);
-
 
 
 # more would go here
