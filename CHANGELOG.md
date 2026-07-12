@@ -1,6 +1,10 @@
 
 ## Change Log
 
+### Security fixes in 3.2.x
+
+* Security fix: HTML-escape URLs in the HTML report to prevent stored XSS from a server-controlled `Location:` header (#3090)
+
 ### Features implemented / improvements in 3.2
 
 * Rating (SSL Labs), as of 3.2.2 version 2009r
