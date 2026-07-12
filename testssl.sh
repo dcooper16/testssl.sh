@@ -739,8 +739,8 @@ tmln_fixme() { tmln_warning "Fixme: $1"; }
 pr_fixme()   { pr_warning "Fixme: $1"; }
 prln_fixme() { prln_warning "Fixme: $1"; }
 
-pr_url()     { tm_out "$1"; html_out "<a href=\"$1\" style=\"color:black;text-decoration:none;\">$1</a>"; }
-pr_boldurl() { tm_bold "$1"; html_out "<a href=\"$1\" style=\"font-weight:bold;color:black;text-decoration:none;\">$1</a>"; }
+pr_url()     { tm_out "$1"; html_out "<a href=\"$(html_reserved "$1")\" style=\"color:black;text-decoration:none;\">$(html_reserved "$1")</a>"; }
+pr_boldurl() { tm_bold "$1"; html_out "<a href=\"$(html_reserved "$1")\" style=\"font-weight:bold;color:black;text-decoration:none;\">$(html_reserved "$1")</a>"; }
 
 ### color switcher (see e.g. https://linuxtidbits.wordpress.com/2008/08/11/output-color-on-bash-scripts/
 ###                          https://www.tldp.org/HOWTO/Bash-Prompt-HOWTO/x405.html
