@@ -1,9 +1,9 @@
 
 ## Change Log
 
-### Security fixes in 3.2.x
+### Security fixes in 3.2
 
-* Security fix: HTML-escape URLs in the HTML report to prevent stored XSS from a server-controlled `Location:` header (#3090)
+* (3.2.4): HTML-escape URLs in the HTML report to prevent stored XSS from a server-controlled "Location:" header (#3090)
 
 ### Features implemented / improvements in 3.2
 
