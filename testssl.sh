@@ -20935,7 +20935,7 @@ find_openssl_binary() {
 
      # In order to avoid delays due to lookups of the hostname "invalid." we just try to avoid using "-connect invalid."
      # when possible. The following does a check fopr that. For WSL we stick for now to the old scheme. Not sure about Cygwin
-     if [[ SYSTEM2 == "WSL" ]]; then
+     if [[ $SYSTEM2 == "WSL" ]]; then
           NXCONNECT=-connect $NXDNS
      else
           # If this connects and bails out with an error message, we do not need "-connect invalid."
