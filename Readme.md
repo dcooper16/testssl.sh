@@ -11,7 +11,7 @@
 [![CI test MacOS](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_macos.yml/badge.svg?branch=3.2)](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_macos.yml)
 [![Docker](https://img.shields.io/docker/pulls/drwetter/testssl.sh)](https://github.com/testssl/testssl.sh/blob/3.2/Dockerfile.md)
 ![Mastodon Follow](https://img.shields.io/mastodon/follow/109319848143024146?domain=infosec.exchange)
-[![Bluesky](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpublic.api.bsky.app%2Fxrpc%2Fapp.bsky.actor.getProfile%2F%3Factor%3Dtestssl.bsky.social&query=%24.followersCount&style=social&logo=bluesky&label=Follow%20%40testssl.sh)
+![Bluesky](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpublic.api.bsky.app%2Fxrpc%2Fapp.bsky.actor.getProfile%2F%3Factor%3Dtestssl.bsky.social&query=%24.followersCount&style=social&logo=bluesky&label=Follow%20%40testssl.sh)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/testssl/testssl.sh?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 `testssl.sh` is a free command line tool which checks a server's service on
@@ -30,8 +30,8 @@ cryptographic flaws.
 * Reliability: features are tested thoroughly.
 * Privacy: It's only you who sees the result, not a third party.
 * Freedom: It's 100% open source. You can look at the code, see what's going on.
-* The development is free and open @ GitHub and participation is welcome.
-* Unit tests ensure maturity (output is consistent, JSON is valid, runs under Linux+MacOS etc)
+* The development is free and open @ GitHub. Participation and contributions are welcome.
+* Unit tests ensure maturity: check for consistency, whether JSON is valid, runs under Linux+MacOS, and a lot more!
 
 ### License
 
@@ -101,7 +101,7 @@ Given the current manpower we only support n-1 versions. We started a 3.3.dev br
 * .. it is there for reading. Please do so :-) -- at least before asking questions. See man page in groff, html and markdown format in `~/doc/`.
 * [https://testssl.sh/](https://testssl.sh/) will help to get you started.
 * There's also an [AI generated doc](https://deepwiki.com/testssl/testssl.sh), see also below.
-* Will Hunt provides a longer [description](https://www.4armed.com/blog/doing-your-own-ssl-tls-testing/) for an older version (2.8), including useful background information.
+* Will Hunt provided a longer [description](https://www.4armed.com/blog/doing-your-own-ssl-tls-testing/). While it was written for an older version (2.8), it still includes background information.
 
 ### Contributing
 
@@ -120,6 +120,10 @@ Please file bugs in the issue tracker @ GitHub. Do not forget to provide detaile
 https://github.com/testssl/testssl.sh/wiki/Bug-reporting. Nobody can read your thoughts -- yet. And only agencies your screen ;-)
 
 You can also debug yourself, see [here](https://github.com/testssl/testssl.sh/wiki/Findings-and-HowTo-Fix-them).
+
+### Security bug reports
+
+See [SECURITY.md](https://github.com/testssl/testssl.sh/blob/3.2/SECURITY.md).
 
 ----
 
