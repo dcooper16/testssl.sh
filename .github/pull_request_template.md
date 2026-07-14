@@ -7,7 +7,7 @@ This includes:
 - Resolved or fixed issue: <-- ✍️ Add GitHub issue number in format `#0000` 
 - A clear and concise summary of the change and which issue (if any) it fixes. Should also include relevant motivation and context.
 - Please don't remove anything.
-- You can tick the boxes later after you save the PR or change the blank between the square brackets by an X or x
+- You can tick the boxes later after you saved the PR or change the blank between the square brackets by an X or x
 
 -->
 
