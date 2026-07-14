@@ -4,7 +4,7 @@
 
 This project takes security seriously  &mdash;this is meant literally  &mdash;not like some companies claim after a breach or other security incident.
 
-The attack surface of testssl.sh is quite small and thus there should not be any serious blunders. We followed recommeded patterns, e.g. like validate inputs and a lot more.
+The attack surface of testssl.sh is quite small and thus there should not be any serious blunders. We followed recommended security practises, e.g. like validate inputs and a lot more.
 
 However this project was made by humans and despite our dedication there could be still security bugs. If you find one and the impact is not low, please use [Responsible
 Disclosure](https://en.wikipedia.org/wiki/Full_disclosure_(computer_security)#Coordinated_vulnerability_disclosure), see 
