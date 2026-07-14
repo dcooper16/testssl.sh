@@ -145,6 +145,10 @@ https://github.com/testssl/testssl.sh/wiki/Bug-reporting. Nobody can read your t
 
 You can also debug yourself, see [here](https://github.com/testssl/testssl.sh/wiki/Findings-and-HowTo-Fix-them).
 
+### Security bug reports
+
+See  [SECURITY.md](https://github.com/testssl/testssl.sh/blob/3.3dev/SECURITY.md).
+
 ----
 
 ### External/related projects
