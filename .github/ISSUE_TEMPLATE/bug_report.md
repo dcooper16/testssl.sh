@@ -22,7 +22,7 @@ It's much appreciated if you spot bugs and file them! Please keep in mind though
 - [ ] Different version, check for updates here:  <!-- Please specify -->
 
 
-**Before you open an issue please consult the [FAQ](https://github.com/testssl/testssl.sh/blob/3.3dev/FAQ.md) and check whether this is a known problem by searching the  [issues](https://github.com/testssl/testssl.sh/issues)**
+**Before you open an issue please consult the [FAQ](https://github.com/testssl/testssl.sh/blob/3.2/FAQ.md) and check whether this is a known problem by searching the  [issues](https://github.com/testssl/testssl.sh/issues)**
 
 - [ ] Is related to ...
 - [ ] couldn't find anything
