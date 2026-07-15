@@ -220,6 +220,7 @@ HPKP_MIN=${HPKP_MIN:-30}                # >=30 days should be ok for HPKP_MIN, p
      HPKP_MIN=$((HPKP_MIN * 86400))     # correct to seconds
 DAYS2WARN1=${DAYS2WARN1:-60}            # days to warn before cert expires, threshold 1
 DAYS2WARN2=${DAYS2WARN2:-30}            # days to warn before cert expires, threshold 2
+DAYS_VALID_SHORTLIVED=${DAYS_VALID_SHORTLIVED:-10}  # validity period (notAfter-notBefore) <= this many days => "short-lived", see CA/Browser Forum BR 1.6.1 and #3097
 UNBRACKTD_IPV6=${UNBRACKTD_IPV6:-false} # some versions of OpenSSL (like Gentoo) don't support [bracketed] IPv6 addresses
 NO_ENGINE=${NO_ENGINE:-false}           # if there are problems finding the (external) openssl engine set this to true
 declare -r CLIENT_MIN_FS=5              # number of ciphers needed to run a test for FS
@@ -9590,6 +9591,7 @@ certificate_info() {
      local indent=""
      local days2warn2=$DAYS2WARN2
      local days2warn1=$DAYS2WARN1
+     local cert_is_shortlived=false
      local provides_stapling=false
      local caa_node="" all_caa="" caa_property_name="" caa_property_value=""
      local response=""
@@ -10257,12 +10259,32 @@ certificate_info() {
           days2warn1=$((days2warn1 / 2))
      fi
 
+     # A short-lived certificate has a validity period (notAfter - notBefore) at or below
+     # DAYS_VALID_SHORTLIVED. These (e.g. Let's Encrypt's 6-day "shortlived" profile) are
+     # intentionally short, so the normal days2warn thresholds would always flag them red.
+     # For those we only warn when the cert is nearly expired (< 24h left), see #3097.
+     [[ $diffseconds -gt 0 ]] && [[ $diffseconds -le $((secsaday*DAYS_VALID_SHORTLIVED)) ]] && cert_is_shortlived=true
+
      debugme echo -n "(diffseconds: $diffseconds)"
      if ! [[ "$($OPENSSL x509 -checkend 1 2>>$ERRFILE <<< "$hostcert")" =~ \ not\  ]]; then
           pr_svrty_critical "expired"
           expfinding="expired"
           expok="CRITICAL"
           set_grade_cap "T" "Certificate expired"
+     elif "$cert_is_shortlived"; then
+          # An intentionally short-lived cert (e.g. Let's Encrypt's 6-day profile) shouldn't be
+          # flagged red just for its short lifespan. Warn only when it is about to expire (< 24h
+          # left) and only if its total lifetime is more than 24h -- otherwise the 24h rule would
+          # flag such a cert red for its whole life. The "short-lived cert" remark signals intent.
+          if [[ $diffseconds -gt $secsaday ]] && \
+             ! [[ "$($OPENSSL x509 -checkend $secsaday 2>>$ERRFILE <<< "$hostcert")" =~ \ not\  ]]; then
+               pr_svrty_high "short-lived cert, expires < 24h"
+               expfinding+="short-lived cert, expires < 24h"
+               expok="HIGH"
+          else
+               pr_svrty_good "short-lived cert ($days2expire days)"
+               expfinding+="short-lived cert ($days2expire days)"
+          fi
      else
           # low threshold first
           if [[ "$($OPENSSL x509 -checkend $((secsaday*days2warn2)) 2>>$ERRFILE <<< "$hostcert")" =~ \ not\  ]]; then
@@ -22101,6 +22123,7 @@ HPKP_MIN: $HPKP_MIN
 CLIENT_MIN_FS: $CLIENT_MIN_FS
 DAYS2WARN1: $DAYS2WARN1
 DAYS2WARN2: $DAYS2WARN2
+DAYS_VALID_SHORTLIVED: $DAYS_VALID_SHORTLIVED
 
 IPv6_OK: $IPv6_OK
 MAX_WAITSOCK: $MAX_WAITSOCK
