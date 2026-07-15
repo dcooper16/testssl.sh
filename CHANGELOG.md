@@ -7,6 +7,7 @@
 
 ### Features implemented / improvements in 3.2
 
+* Detect short-lived certificates (validity period <= `DAYS_VALID_SHORTLIVED`, default 10 days) and no longer flag them red merely for their short lifespan; warn only when less than 24h is left (#3097)
 * Rating (SSL Labs), as of 3.2.2 version 2009r
 * Extend Server (cipher) preference: always now in wide mode instead of running all ciphers in the end (per default)
 * Remove "negotiated cipher / protocol"
