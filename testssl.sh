@@ -22352,7 +22352,7 @@ check_proxy() {
                     PROXYIP="$PROXYNODE"
                else
                     # This was tested with vanilla OpenSSL versions
-                    if [[ ${OSSL_VER_MAJOR$}${OSSL_VER_MINOR} -ge 11 ]]; then
+                    if [[ $OSSL_VER_MAJOR -ge 3 ]] || [[ "$OSSL_VER_MAJOR.$OSSL_VER_MINOR" == 1.1.* ]]; then
                          PROXYIP="[$PROXYNODE]"
                     else
                          fatal_cmd_line "OpenSSL version >= 1.1.0 required for IPv6 proxy support" $ERR_OSSLBIN
@@ -22365,7 +22365,7 @@ check_proxy() {
                if [[ -z "$PROXYIP" ]]; then
                     PROXYIP="$(get_aaaa_record "$PROXYNODE" 2>/dev/null | grep -v alias | sed 's/^.*address //')"
                     if [[ -n "$PROXYIP" ]]; then
-                         if [[ ${OSSL_VER_MAJOR$}${OSSL_VER_MINOR} -lt 11 ]]; then
+                         if [[ $OSSL_VER_MAJOR -lt 3 ]] && [[ "$OSSL_VER_MAJOR.$OSSL_VER_MINOR" != 1.1.* ]]; then
                               fatal_cmd_line "OpenSSL version >= 1.1.0 required for IPv6 proxy support" $ERR_OSSLBIN
                          fi
                     fi
