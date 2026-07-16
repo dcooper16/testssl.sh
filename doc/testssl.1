@@ -411,6 +411,8 @@ DAYS2WARN1 is the first threshold when you'll be warning of a certificate expira
 .IP "\[ci]" 4
 DAYS2WARN2 is the second threshold when you'll be warning of a certificate expiration of a host, preset to 30 (days)\. For Let's Encrypt this value will be divided internally by 2\.
 .IP "\[ci]" 4
+DAYS_VALID_SHORTLIVED is preset to 10 (days)\. Certificates with a total validity period (notAfter \- notBefore) of this many days or fewer are treated as intentionally short\-lived (see "Short\-lived Subscriber Certificate" in the CA/Browser Forum Baseline Requirements, e\.g\. Let's Encrypt's 6\-day profile)\. They are not being warned of for their short lifespan\. A warning is issued only when less than 24 hours of validity are left, and only for certificates whose total validity period is more than 24 hours\.
+.IP "\[ci]" 4
 TESTSSL_INSTALL_DIR is the derived installation directory of testssl\.sh\. Relatively to that the \fBbin\fR and mandatory \fBetc\fR directory will be looked for\.
 .IP "\[ci]" 4
 CA_BUNDLES_PATH: If you have an own set of CA bundles or you want to point testssl\.sh to a specific location of a CA bundle, you can use this variable to set the directory which testssl\.sh will use\. Please note that it overrides completely the builtin path of testssl\.sh which means that you will only test against the bundles you point to\. Also you might want to use \fB~/utils/create_ca_hashes\.sh\fR to create the hashes for HPKP\.
