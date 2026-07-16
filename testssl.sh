@@ -26037,8 +26037,8 @@ issue_cmdline_warnings() {
           fileout_insert_warning "cmdline_ssl-native" "WARN" "Usage of '--ssl-native' is not recommended as it will return incomplete and maybe even incorrect results"
      fi
      tmp=${URI#*//}      # remove https:// and (future) friends
-     if [[ ! $tmp =~ [a-zA-Z] ]] && [[ ! $tmp =~ $avoid_complaints ]]; then
-          # No letters indicate it's not a name
+     if [[ ! $tmp =~ [a-zA-Z] ]] && [[ ! $tmp =~ $avoid_complaints ]] && [[ -z "$FNAME" ]]; then
+          # No letters indicate it's not a name. No mass testing via via
           prln_warning " Warning: Target is not a server name: results may be completely wrong, at minimum trust may show false results."
           fileout_insert_warning "cmdline_ip-target" "WARN" "Target is not a server name: results may be completely wrong, at minimum trust may show false results."
      fi
