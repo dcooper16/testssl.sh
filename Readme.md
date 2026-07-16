@@ -165,9 +165,6 @@ Please address questions not specifically to the code of testssl.sh to the respe
 #### Mass scanner w parallel scans and elastic searching the results
 * https://github.com/TKCERT/testssl.sh-masscan
 
-#### Privacy checker using testssl.sh
-* https://privacyscore.org
-
 #### Nagios / Icinga Plugins
 * https://github.com/dnmvisser/nagios-testssl (Python 3)
 * https://gitgud.malvager.net/Wazakindjes/icinga2_plugins/src/master/check_testssl.sh (Shell)
