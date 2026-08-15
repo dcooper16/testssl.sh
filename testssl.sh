@@ -8736,21 +8736,17 @@ get_server_certificate() {
                # For STARTTLS protocols not being implemented yet via sockets this is a bypass otherwise it won't be usable at all (e.g. LDAP)
                if [[ "$STARTTLS" =~ irc ]]; then
                     return 1
-               elif [[ "$1" =~ tls1_3_RSA ]]; then
-                    tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,16,00,14,08,04,08,05,08,06,04,01,05,01,06,01,02,01,08,09,08,0a,08,0b"
-               elif [[ "$1" =~ tls1_3_ECDSA ]]; then
-                    tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,10,00,0e,04,03,05,03,06,03,02,03,08,1a,08,1b,08,1c"
-               elif [[ "$1" =~ tls1_3_EdDSA ]]; then
-                    tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,06,00,04,08,07,08,08"
-               elif [[ "$1" =~ tls1_3_MLDSA ]]; then
-                    tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,08,00,06,09,04,09,05,09,06"
-               elif [[ "$1" =~ tls1_3_SM2 ]]; then
-                    tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,04,00,02,07,08"
-               elif [[ "$1" =~ tls1_3_SLHDSA ]]; then
-                    tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,1a,00,18,09,11,09,12,09,13,09,14,09,15,09,16,09,17,09,18,09,19,09,1a,09,1b,09,1c"
-               else
-                    return 1
                fi
+               case "$1" in
+                    *tls1_3_RSA*)    sigalgs="00,0d,00,16,00,14,08,04,08,05,08,06,04,01,05,01,06,01,02,01,08,09,08,0a,08,0b" ;;
+                    *tls1_3_ECDSA*)  sigalgs="00,0d,00,10,00,0e,04,03,05,03,06,03,02,03,08,1a,08,1b,08,1c" ;;
+                    *tls1_3_EdDSA*)  sigalgs="00,0d,00,06,00,04,08,07,08,08" ;;
+                    *tls1_3_MLDSA*)  sigalgs="00,0d,00,08,00,06,09,04,09,05,09,06" ;;
+                    *tls1_3_SM2*)    sigalgs="00,0d,00,04,00,02,07,08" ;;
+                    *tls1_3_SLHDSA*) sigalgs="00,0d,00,1a,00,18,09,11,09,12,09,13,09,14,09,15,09,16,09,17,09,18,09,19,09,1a,09,1b,09,1c" ;;
+                    *)               return 1 ;;
+               esac
+               tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, $sigalgs"
                success=$?
                [[ $success -eq 0 ]] || return 1
                cp "$TEMPDIR/$NODEIP.parse_tls_serverhello.txt" $TMPFILE
@@ -9377,7 +9373,7 @@ must_staple() {
 }
 
 # TODO: This function checks for Certificate Transparency support based on RFC 6962.
-# It will need to be updated to add checks for Certificate Transparency support based on 6962bis.
+# It will need to be updated to add checks for Certificate Transparency support based on RFC 9162
 # return values are results, no error conditions
 certificate_transparency() {
      local cert_txt="$1"
@@ -9388,7 +9384,7 @@ certificate_transparency() {
      local tls_version="$6"
      local sni=""
      local ciphers=""
-     local extra_extns=""
+     local sigalgs=""
      local -i success
      # Cipher suites that use a certificate with an RSA (signature) public key
      local -r a_rsa="cc,13, cc,15, c0,30, c0,28, c0,14, 00,9f, cc,a8, cc,aa, c0,a3, c0,9f, 00,6b, 00,39, c0,77, 00,c4, 00,88, c0,45, c0,4d, c0,53, c0,61, c0,7d, c0,8b, 16,b7, 16,b9, c0,2f, c0,27, c0,13, 00,9e, c0,a2, c0,9e, 00,67, 00,33, c0,76, 00,be, 00,9a, 00,45, c0,44, c0,4c, c0,52, c0,60, c0,7c, c0,8a, c0,11, c0,12, 00,16, 00,15, 00,14, c0,10"
@@ -9432,21 +9428,15 @@ certificate_transparency() {
      if [[ $number_of_certificates -gt 1 ]] && ! "$SSL_NATIVE"; then
           if [[ "$tls_version" == 0304 ]]; then
                ciphers=", 00,c6, 00,c7, 13,01, 13,02, 13,03, 13,04, 13,05, c0,b4, c0,b5"
-               if [[ "$cipher" == tls1_3_RSA ]]; then
-                    extra_extns=", 00,0d,00,16,00,14,08,04,08,05,08,06,04,01,05,01,06,01,02,01,08,09,08,0a,08,0b"
-               elif [[ "$cipher" == tls1_3_ECDSA ]]; then
-                    extra_extns=", 00,0d,00,10,00,0e,04,03,05,03,06,03,02,03,08,1a,08,1b,08,1c"
-               elif [[ "$cipher" == tls1_3_SM2 ]]; then
-                    extra_extns=", 00,0d,00,04,00,02,07,08"
-               elif [[ "$cipher" == tls1_3_EdDSA ]]; then
-                    extra_extns=", 00,0d,00,06,00,04,08,07,08,08"
-               elif [[ "$cipher" == tls1_3_MLDSA ]]; then
-                    extra_extns=", 00,0d,00,08,00,06,09,04,09,05,09,06"
-               elif [[ "$cipher" == tls1_3_SLHDSA ]]; then
-                    extra_extns=", 00,0d,00,1a,00,18,09,11,09,12,09,13,09,14,09,15,09,16,09,17,09,18,09,19,09,1a,09,1b,09,1c"
-               else
-                    return 1
-               fi
+               case "$cipher" in
+                    tls1_3_RSA)    sigalgs=", 00,0d,00,16,00,14,08,04,08,05,08,06,04,01,05,01,06,01,02,01,08,09,08,0a,08,0b" ;;
+                    tls1_3_ECDSA)  sigalgs=", 00,0d,00,10,00,0e,04,03,05,03,06,03,02,03,08,1a,08,1b,08,1c" ;;
+                    tls1_3_SM2)    sigalgs=", 00,0d,00,04,00,02,07,08" ;;
+                    tls1_3_EdDSA)  sigalgs=", 00,0d,00,06,00,04,08,07,08,08" ;;
+                    tls1_3_MLDSA)  sigalgs=", 00,0d,00,08,00,06,09,04,09,05,09,06" ;;
+                    tls1_3_SLHDSA) sigalgs=", 00,0d,00,1a,00,18,09,11,09,12,09,13,09,14,09,15,09,16,09,17,09,18,09,19,09,1a,09,1b,09,1c" ;;
+                    *) return 1 ;;
+               esac
           else
                [[ "$cipher" =~ aRSA ]] && ciphers+=", $a_rsa"
                [[ "$cipher" =~ eRSA ]] && ciphers+=", $e_rsa"
@@ -9460,7 +9450,7 @@ certificate_transparency() {
                ciphers+=", 00,ff"
           fi
           [[ -z "$sni_used" ]] && sni="$SNI" && SNI=""
-          tls_sockets "${tls_version:2:2}" "${ciphers:2}" "all" "00,12,00,00$extra_extns"
+          tls_sockets "${tls_version:2:2}" "${ciphers:2}" "all" "00,12,00,00$sigalgs"
           success=$?
           [[ -z "$sni_used" ]] && SNI="$sni"
           if [[ $success -eq 0 || $success -eq 2 ]] && \
@@ -10751,7 +10741,7 @@ run_server_defaults() {
      certificate_type[9]="ECDSA" ; certificate_type[10]="EdDSA"
      certificate_type[11]="MLDSA" ; certificate_type[12]="SM2"
      certificate_type[13]="SLHDSA"
-     local -i nr_cert_types=13
+     nr_cert_types=13
 
      if "$SERVER_SIZE_LIMIT_BUG"; then
           ciphers_to_test[3]="aDSS:aDH:aECDH"
