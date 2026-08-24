@@ -5,7 +5,7 @@ The certificate trust stores were retrieved from
 
 * **Linux:** Copied from an up-to-date Debian Linux machine
 * **Mozilla:** https://curl.haxx.se/docs/caextract.html (MPL 2.0)
-* **Java:** extracted (``keytool -list -rfc -keystore lib/security/cacerts | grep -E -v '^$|^\*\*\*\*\*|^Entry |^Creation |^Alias'``) from a JDK LTS version from https://jdk.java.net/. Use dos2unix for the store which you generated.
+* **Java:** extracted (``keytool -list -rfc -keystore lib/security/cacerts | grep -E -v '^$|^\*\*\*\*\*|^Entry |^Creation |^Alias'``) from a JDK LTS version from https://jdk.java.net/, see link. Use dos2unix for the store which you generated.
 * **Microsoft:** Following command pulls all certificates from Windows Update services: ``CertUtil -syncWithWU -f -f . `` (see also https://aka.ms/RootCertDownload, https://technet.microsoft.com/en-us/library/dn265983(v=ws.11).aspx#BKMK_CertUtilOptions). They are in DER format. Convert them like ``for f in *.crt; do echo $f >/dev/stderr; openssl x509 -in $f -inform DER -outform PEM ;done >/tmp/Microsoft.pem``.
 * **Apple:**
     1. __System:__ from Apple OS X keychain app.  Open Keychain Access utility, i.e.
@@ -14,7 +14,7 @@ The certificate trust stores were retrieved from
   --> "Keychain Access" (2 click). In that window --> "Keychains" --> "System Root"
   --> "Category" --> "All Items"
   Select all CA certificates except for "Developer ID Certification Authority", omit expired ones,  "File" --> "Export Items"
-    2. __Internet:__ Clone https://github.com/apple-oss-distributions/security_certificates.git , cd to ``security_certificates/certificates/roots``, ``for f in *.*; do echo $f >/dev/stderr; openssl x509 -in $f -inform DER -outform PEM ;done >/tmp/Apple.pem``
+    2. __Internet:__ Clone (``--depth=1``) https://github.com/apple-oss-distributions/security_certificates.git , cd to ``security_certificates/certificates/roots``, ``for f in *.*; do echo $f >/dev/stderr; openssl x509 -in $f -inform DER -outform PEM ;done >/tmp/Apple.pem``
 
 Google Chromium uses basically the trust stores above, see https://www.chromium.org/Home/chromium-security/root-ca-policy.
 
