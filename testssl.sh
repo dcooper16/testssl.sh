@@ -25138,7 +25138,7 @@ lets_roll() {
      fi
 
      [[ -z "$NODE" ]] && parse_hn_port "${URI}"             # NODE, URL_PATH, PORT, IPADDRs and IP46ADDR is set now
-     prepare_logging
+     prepare_logging "${FNAME_DATE}"
 
      if [[ -n "$PROXY" ]] && $DNS_VIA_PROXY; then
           NODEIP="$NODE"
