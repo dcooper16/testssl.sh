@@ -23627,9 +23627,9 @@ datebanner() {
 
      if [[ "$1" =~ Done ]] ; then
           scan_time_f="$(printf "%04ss" "$SCAN_TIME")"           # 4 digits because of windows
-          pr_reverse "$1 $(date +%F) $(date +%T) [$scan_time_f] -->> $node_banner <<--"
+          pr_reverse "$1 $(date +%F) $(date "+%T %z") [$scan_time_f] -->> $node_banner <<--"
      else
-          pr_reverse "$1 $(date +%F) $(date +%T)        -->> $node_banner <<--"
+          pr_reverse "$1 $(date +%F) $(date "+%T %z")        -->> $node_banner <<--"
      fi
      outln "\n"
      [[ "$1" =~ Start ]] && display_rdns_etc
