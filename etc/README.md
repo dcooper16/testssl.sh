@@ -18,7 +18,7 @@ The certificate trust stores were retrieved from
 
 Google Chromium uses basically the trust stores above, see https://www.chromium.org/Home/chromium-security/root-ca-policy.
 
-**ATTENTION**: From each store you need to remove the _DST Root CA X3_ which is for your reference in this directory, see file ``DST Root CA X3.txt``. As of July 2024 this seemed to be needed only for the Microsoft CA store. Apple's file name in 2023 was ``IdenTrust_Root_X3.der``. For the Microsoft CA store you can identify the file beforehand like ``for f in *.crt; do  openssl x509 -in $f -inform DER -text -noout  | grep -q 'DST' && echo $f ;done`` or use a line from ``DST Root CA X3.txt`` and grep for that in the resulting ``Microsoft.pem``.
+**ATTENTION**: From each store you need to remove the _DST Root CA X3_ which is for your reference in this directory, see file ``DST Root CA X3.txt``. As of August 2026 this seemed to be needed only for the Microsoft CA store. Apple's file name in 2023 was ``IdenTrust_Root_X3.der``. For the Microsoft CA store you can identify the file beforehand like ``for f in *.crt; do  openssl x509 -in $f -inform DER -text -noout  | grep -q 'DST' && echo $f ;done`` or use a line from ``DST Root CA X3.txt`` and grep for that in the resulting ``Microsoft.pem``.
 
 If you want to check trust against e.g. a company internal CA you need to use ``./testssl.sh --add-ca companyCA1.pem,companyCA2.pem <further_cmds>`` or ``ADDTL_CA_FILES=companyCA1.pem,companyCA2.pem ./testssl.sh <further_cmds>``.
 
