@@ -2587,6 +2587,7 @@ s_client_options() {
 #
 service_detection() {
      local -i was_killed
+     local jsonID
 
      if [[ "$CLIENT_AUTH" != required ]]; then
           if ! "$HAS_TLS13" && "$TLS13_ONLY"; then
@@ -10710,6 +10711,7 @@ run_server_defaults() {
      local cn_nosni cn_sni sans_nosni sans_sni san tls_extensions extn client_auth_ca
      local using_sockets=true
      local spaces="                              "
+     local jsonID
 
      "$SSL_NATIVE" && using_sockets=false
 
@@ -18532,6 +18534,7 @@ run_crime() {
      local cve="CVE-2012-4929"
      local cwe="CWE-310"
      local hint=""
+     local jsonID
 
      # In a nutshell: don't offer TLS/SPDY compression. This tests for CRIME Vulnerability on HTTPS only,
      # not SPDY or ALPN (yet). Please note that it is an attack where you need client side control, so in
@@ -18804,6 +18807,7 @@ run_sweet32() {
      local ssl2_sweet=false
      local using_sockets=true
      local tls1_1_vulnerable=false
+     local jsonID="SWEET32"
 
      pr_bold " SWEET32"; out " (${cve// /, })    "
 
@@ -18849,7 +18853,7 @@ run_sweet32() {
           if [[ $(( nr_supported_ciphers + nr_ssl2_supported_ciphers )) -le $nr_cipher_minimal ]]; then
                pr_local_problem "Only ${nr_supported_ciphers}+${nr_ssl2_supported_ciphers} \"SWEET32 ciphers\" found in your $OPENSSL."
                outln " Test skipped"
-               fileout "SWEET32" "WARN" "Not tested, lack of local support ($((nr_supported_ciphers + nr_ssl2_supported_ciphers)) ciphers only)" "$cve" "$cwe" "$hint"
+               fileout "$jsonID" "WARN" "Not tested, lack of local support ($((nr_supported_ciphers + nr_ssl2_supported_ciphers)) ciphers only)" "$cve" "$cwe" "$hint"
                return 1
           fi
           for proto in -no_ssl2 -tls1_1 -tls1 -ssl3; do
@@ -18882,36 +18886,36 @@ run_sweet32() {
      fi
      if [[ $sclient_success -eq 0 ]] && "$ssl2_sweet" ; then
           pr_svrty_low "VULNERABLE"; out ", uses 64 bit block ciphers for SSLv2 and above"
-          fileout "SWEET32" "LOW" "uses 64 bit block ciphers for SSLv2 and above" "$cve" "$cwe" "$hint"
+          fileout "$jsonID" "LOW" "uses 64 bit block ciphers for SSLv2 and above" "$cve" "$cwe" "$hint"
           "$tls1_1_vulnerable" && set_grade_cap "C" "Uses 64 bit block ciphers with TLS 1.1 (vulnerable to SWEET32)"
      elif [[ $sclient_success -eq 0 ]]; then
           pr_svrty_low "VULNERABLE"; out ", uses 64 bit block ciphers"
-          fileout "SWEET32" "LOW" "uses 64 bit block ciphers" "$cve" "$cwe" "$hint"
+          fileout "$jsonID" "LOW" "uses 64 bit block ciphers" "$cve" "$cwe" "$hint"
           "$tls1_1_vulnerable" && set_grade_cap "C" "Uses 64 bit block ciphers with TLS 1.1 (vulnerable to SWEET32)"
      elif "$ssl2_sweet"; then
           pr_svrty_low "VULNERABLE"; out ", uses 64 bit block ciphers with SSLv2 only"
-          fileout "SWEET32" "LOW" "uses 64 bit block ciphers with SSLv2 only" "$cve" "$cwe" "$hint"
+          fileout "$jsonID" "LOW" "uses 64 bit block ciphers with SSLv2 only" "$cve" "$cwe" "$hint"
      else
           pr_svrty_best "not vulnerable (OK)";
           if "$using_sockets"; then
-               fileout "SWEET32" "OK" "not vulnerable" "$cve" "$cwe"
+               fileout "$jsonID" "OK" "not vulnerable" "$cve" "$cwe"
           else
                if [[ "$nr_supported_ciphers" -ge 38 ]]; then
                     # Likely only PSK/KRB5 ciphers are missing: display discrepancy but no warning
                     if "$HAS_SSL2"; then
                          out ", $nr_supported_ciphers/$nr_sweet32_ciphers (SSLv2: $nr_ssl2_sweet32_ciphers/$nr_ssl2_supported_ciphers) local ciphers"
-                         fileout "SWEET32" "OK" "not vulnerable ($nr_supported_ciphers of $nr_sweet32_ciphers (SSLv2: $nr_ssl2_sweet32_ciphers/$nr_ssl2_supported_ciphers)) local ciphers" "$cve" "$cwe"
+                         fileout "$jsonID" "OK" "not vulnerable ($nr_supported_ciphers of $nr_sweet32_ciphers (SSLv2: $nr_ssl2_sweet32_ciphers/$nr_ssl2_supported_ciphers)) local ciphers" "$cve" "$cwe"
                     else
                          out ", $nr_supported_ciphers/$nr_sweet32_ciphers local ciphers"
-                         fileout "SWEET32" "OK" "not vulnerable ($nr_supported_ciphers of $nr_sweet32_ciphers local ciphers" "$cve" "$cwe"
+                         fileout "$jsonID" "OK" "not vulnerable ($nr_supported_ciphers of $nr_sweet32_ciphers local ciphers" "$cve" "$cwe"
                     fi
                else
                     if "$HAS_SSL2"; then
                          pr_warning ", $nr_supported_ciphers/$nr_sweet32_ciphers (SSLv2: $nr_ssl2_sweet32_ciphers/$nr_ssl2_supported_ciphers) local ciphers"
-                         fileout "SWEET32" "WARN" "not vulnerable but ($nr_supported_ciphers of $nr_sweet32_ciphers (SSLv2: $nr_ssl2_sweet32_ciphers/$nr_ssl2_supported_ciphers)) local ciphers only" "$cve" "$cwe"
+                         fileout "$jsonID" "WARN" "not vulnerable but ($nr_supported_ciphers of $nr_sweet32_ciphers (SSLv2: $nr_ssl2_sweet32_ciphers/$nr_ssl2_supported_ciphers)) local ciphers only" "$cve" "$cwe"
                     else
                          pr_warning ", $nr_supported_ciphers/$nr_sweet32_ciphers local ciphers"
-                         fileout "SWEET32" "WARN" "not vulnerable but ($nr_supported_ciphers of $nr_sweet32_ciphers) local ciphers only" "$cve" "$cwe"
+                         fileout "$jsonID" "WARN" "not vulnerable but ($nr_supported_ciphers of $nr_sweet32_ciphers) local ciphers only" "$cve" "$cwe"
                     fi
                fi
           fi
