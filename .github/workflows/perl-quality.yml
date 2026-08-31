@@ -21,7 +21,7 @@ jobs:
         with:
           perl-version: '5.38'
       - name: Install dev modules
-        run: cpanm --notest Perl::Critic perltidy cpan-audit
+        run: cpanm --notest Perl::Critic Perl::Tidy CPAN::Audit
       - name: Syntax check all test files
         run: |
           find t -name '*.t' -o -name '*.pm' | while read -r f; do
@@ -35,3 +35,4 @@ jobs:
           git diff --exit-code
       - name: Audit CPAN modules for known CVEs
         run: cpan-audit
+
