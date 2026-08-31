@@ -1,8 +1,5 @@
 name: Perl quality
 
-
-name: Perl quality
-
 on:
   pull_request:
     paths:
