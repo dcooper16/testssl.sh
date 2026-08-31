@@ -1,0 +1,38 @@
+name: Perl quality
+
+on:
+  pull_request:
+    paths:
+      - 't/**'
+      - 'cpanfile'
+      - '.perlcritic'
+      - '.github/workflows/perl-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  perl:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: shivammathur/setup-perl@v14
+        with:
+          perl-version: '5.38'
+      - name: Install dev modules
+        run: cpanm --notest Perl::Critic perltidy cpan-audit
+      - name: Syntax check all test files
+        run: |
+          find t -name '*.t' -o -name '*.pm' | while read -r f; do
+            perl -I t/lib -c "$f"
+          done
+      - name: Perl::Critic
+        run: perlcritic --verbose '%f:%l:%e:%m\n' t/
+      - name: perltidy (fail on diff)
+        run: |
+          perltidy -p t/
+          git diff --exit-code
+      - name: Audit CPAN modules for known CVEs
+        run: cpan-audit
+
