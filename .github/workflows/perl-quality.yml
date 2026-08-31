@@ -1,5 +1,8 @@
 name: Perl quality
 
+
+name: Perl quality
+
 on:
   pull_request:
     paths:
@@ -16,8 +19,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - uses: shivammathur/setup-perl@v14
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: shogo82148/actions-setup-perl@v1.43.1
         with:
           perl-version: '5.38'
       - name: Install dev modules
@@ -35,4 +38,3 @@ jobs:
           git diff --exit-code
       - name: Audit CPAN modules for known CVEs
         run: cpan-audit
-
