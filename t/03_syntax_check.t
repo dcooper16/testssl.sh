@@ -36,7 +36,7 @@ $tests++;
 #3
 printf "\n%s\n", "Sourcing without checking the file exists #1 ...";
 
-@matches = qx(grep -nP '^\\s*\\.\\s+\\$' $prg);
+@matches = qx(grep -nP '^\\s*\\.\\s+\$' $prg);
 is(scalar(@matches), 0, "Checking bad sourcing pattern #1")
 or diag(@matches);
 $tests++;
@@ -44,7 +44,7 @@ $tests++;
 #4
 printf "\n%s\n", "Sourcing without checking the file exists #2 ...";
 
-@matches = qx(grep -nP '^\\s*source\\s+\\$' $prg);
+@matches = qx(grep -nP '^\\s*source\\s+\$' $prg);
 is(scalar(@matches), 0, "Checking bad sourcing pattern #2")
 or diag(@matches);
 $tests++;
