@@ -30,7 +30,7 @@ is($retMode & oct("400"), oct("0400"), "Checking \"./testssl.sh\" for read permi
 $tests++;
 
 #2
-is($retMode & oct("0100"), oct("0100)", "Checking \"./testssl.sh\" for execute permission");
+is($retMode & oct("0100"), oct("0100"), "Checking \"./testssl.sh\" for execute permission");
 $tests++;
 
 $fileout = `bash $prg 2>&1`;
