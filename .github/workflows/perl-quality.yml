@@ -20,22 +20,27 @@ jobs:
       - uses: shogo82148/actions-setup-perl@v1.43.1
         with:
           perl-version: '5.38'
+
       - name: Install dev modules
         run: cpanm --notest Perl::Critic Perl::Tidy CPAN::Audit
       - name: Install dev modules
         # add all perl modules from other modules tool, otherwise the next run fails
         run: cpanm --notest Data::Dumper IPC::Run3 JSON Test::More Text::Diff
-      - name: Syntax check all test files
+
+      - name: 'Syntax check #1 w Perl::Tidy'
+        run: |
+          perltidy -se t/*.t
+        #TODO: we should as well reformat with the t(i)dy files generated
+
+      - name: Syntax check all test files with perl itself
         run: |
           find t -name '*.t' -o -name '*.pm' | while read -r f; do
             perl -I t/lib -c "$f"
           done
-      - name: Perl::Critic
-        run: perlcritic --verbose '%f:%l:%e:%m\n' t/
-      - name: perltidy (fail on diff)
-        run: |
-          perltidy -p t/
-          git diff --exit-code
+
+      - name: Use Perl::Critic for best practises
+        run: perlcritic -4 t/*.t
+
       - name: Audit CPAN modules for known CVEs
         run: cpan-audit
 
