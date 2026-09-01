@@ -4,6 +4,7 @@
 # This could be amended by using HTML::Tidy or HTML::Valid
 
 use strict;
+use warnings;
 use Test::More;
 use Data::Dumper;
 use Text::Diff;
