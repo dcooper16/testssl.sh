@@ -3,6 +3,7 @@
 # Basics: are there semantic errors which are easy to spot?
 
 use strict;
+use warnings;
 use Test::More;
 
 my $tests = 0;
