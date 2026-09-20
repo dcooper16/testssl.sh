@@ -2125,7 +2125,7 @@ check_revocation_ocsp() {
                     [[ $DEBUG -ge 3 ]] && echo "Switching to $openssl_bin "
                     ossl_ver="$($openssl_bin version -v 2>/dev/null)"
                     ossl_name="${ossl_ver%% *}"
-                    ossl_ver="${ossl_ver#$ossl_name }"
+                    ossl_ver="${ossl_ver#"$ossl_name" }"
                     ossl_ver="${ossl_ver%% *}"
                     ossl_ver_major="${ossl_ver%%\.*}"
                fi
@@ -2149,7 +2149,7 @@ check_revocation_ocsp() {
 
      if [[ $success -eq 0 ]] && grep -Fq "Response verify OK" "$tmpfile"; then
           response="$(grep -F "$HOSTCERT: " "$tmpfile")"
-          response="${response#$HOSTCERT: }"
+          response="${response#"$HOSTCERT": }"
           response="${response%\.}"
           if [[ "$response" =~ good ]]; then
                out ", "
@@ -3544,7 +3544,7 @@ run_security_headers() {
                # Include $header when determining where to insert line breaks, but print $header
                # separately.
                header_output="$(out_row_aligned_max_width "${header:2}: $HEADERVALUE" "$spaces  " $TERM_WIDTH)"
-               outln "${header_output#${header:2}}"
+               outln "${header_output#"${header:2}"}"
                fileout "$header" "$svrty" "$HEADERVALUE"
           fi
      done
@@ -7652,7 +7652,7 @@ cipher_pref_check() {
      done
      if [[ -n "$first_cipher" ]]; then
           # Search for first ChaCha20 cipher that comes after $first_cipher in $order.
-          for first_chacha_cipher in ${order#*$first_cipher}; do
+          for first_chacha_cipher in ${order#*"$first_cipher"}; do
                [[ "$first_chacha_cipher" =~ CHACHA20 ]] && break
           done
      fi
@@ -8232,7 +8232,7 @@ extract_stapled_ocsp() {
           ocsp="${response##*TLS server extension \"status request\" (id=5), len=}"
           ocsp="${ocsp%%<<<*}"
           tmp="${ocsp%%[!0-9]*}"
-          ocsp="${ocsp#$tmp}"
+          ocsp="${ocsp#"$tmp"}"
           ocsp_len=2*$tmp
           ocsp="$(awk ' { print $3 $4 $5 $6 $7 $8 $9 $10 $11 $12 $13 $14 $15 $16 $17 } ' <<< "$ocsp" | sed 's/-//')"
           ocsp="$(strip_spaces "$(newline_to_spaces "$ocsp")")"
@@ -8474,7 +8474,7 @@ get_cn_from_cert() {
      # see x509(1ssl):
      subject="$($OPENSSL x509 -in $1 -noout -subject -nameopt multiline,-align,sname,-esc_msb,utf8,-space_eq 2>>$ERRFILE)"
      echo "$(awk -F'=' '/CN=/ { print $2 }' <<< "$subject" | tr '\n' ' ')"
-     return $?
+     return 0
 }
 
 # Return 0 if the name provided in arg1 is a wildcard name
@@ -8558,7 +8558,7 @@ compare_server_name_to_cert() {
      local cert="$1"
      local servername cns cn dns_sans ip_sans san dercert tag
      local srv_id="" xmppaddr=""
-     local -i i len len1 cn_match=0 wildcard_cert=0
+     local -i i j len len1 cn_match=0 wildcard_cert=0
      local -i subret=0             # no error condition, passing results
 
      HAS_DNS_SANS=false
@@ -9101,14 +9101,14 @@ determine_dates_certificate() {
           d=$(( ${yearend:8:2} - ${yearstart:8:2} ))
           # We take the year, month, days here as old OpenBSD's date is too difficult for real conversion
           # see comment in parse_date(). In diffseconds then we have the estimated absolute validity period
-          diffseconds=$(( d + ((m*30)) + ((y*365)) ))
+          diffseconds=$(( d + (m*30) + (y*365) ))
           diffseconds=$((diffseconds * secsaday))
           # Now we estimate the days left plus length of month/year:
           yearnow="$(date -juz GMT "+%Y-%m-%d %H:%M")"
           y=$(( ${yearend:0:4} - ${yearnow:0:4} ))
           m=$(( ${yearend:5:1} - ${yearnow:5:1} + ${yearend:6:1} - ${yearnow:6:1} ))
           d=$(( ${yearend:8:2} - ${yearnow:8:2} ))
-          days2expire=$(( d + ((m*30)) + ((y*365)) ))
+          days2expire=$(( d + (m*30) + (y*365) ))
      else
           startdate="$(parse_date "$startdate" +"%F %H:%M" "%b %d %T %Y %Z")"
           enddate="$(parse_date "$enddate" +"%F %H:%M" "%b %d %T %Y %Z")"
@@ -10175,7 +10175,7 @@ certificate_info() {
           [[ "$intermediates" =~ \-\-\-\-\-BEGIN\ CERTIFICATE\-\-\-\-\- ]] || break
           intermediates="${intermediates#*-----BEGIN CERTIFICATE-----}"
           cert="${intermediates%%-----END CERTIFICATE-----*}"
-          intermediates="${intermediates#${cert}-----END CERTIFICATE-----}"
+          intermediates="${intermediates#"${cert}"-----END CERTIFICATE-----}"
           cert="-----BEGIN CERTIFICATE-----${cert}-----END CERTIFICATE-----"
 
           fileout "intermediate_cert <#${i}>${json_postfix}" "INFO" "$(pem_to_one_line "$cert")"
@@ -10854,7 +10854,7 @@ run_fs() {
           if [[ "$(count_words "$OSSL_SUPPORTED_CURVES")" -gt 28 ]]; then
                # Place the first 28 supported curves in curves_list1 and the remainder in curves_list2.
                curves_list2="${curves_list1#* * * * * * * * * * * * * * * * * * * * * * * * * * * * }"
-               curves_list1="${curves_list1%$curves_list2}"
+               curves_list1="${curves_list1%"$curves_list2"}"
                curves_list1="$(strip_trailing_space "$curves_list1")"
                curves_list2="${curves_list2// /:}"
           fi
@@ -13927,8 +13927,8 @@ gcm() {
                vh=${gcm_ctx_hh[i]}
                vl=${gcm_ctx_hl[i]}
                for (( j=1; j < i; j++ )); do
-                    gcm_ctx_hh[$((i+j))]=$((vh ^ gcm_ctx_hh[j]))
-                    gcm_ctx_hl[$((i+j))]=$((vl ^ gcm_ctx_hl[j]))
+                    gcm_ctx_hh[i+j]=$((vh ^ gcm_ctx_hh[j]))
+                    gcm_ctx_hl[i+j]=$((vl ^ gcm_ctx_hl[j]))
                done
           done
 
@@ -14066,7 +14066,7 @@ gcm-decrypt() {
      tmp="$(gcm "$cipher" "$key" "$nonce" "$ciphertext" "$aad" "decrypt" "$compute_tag")"
      [[ $? -ne 0 ]] && return 7
      computed_tag="${tmp##* }"
-     plaintext="${tmp% $computed_tag}"
+     plaintext="${tmp% "$computed_tag"}"
 
      if ! "$compute_tag" || [[ "$computed_tag" == $expected_tag ]]; then
           if [[ -n "$plaintext" ]]; then
@@ -20853,10 +20853,10 @@ find_openssl_binary() {
      OSSL_VER=$(awk -F' ' '{ print $2 }' <<< "${ossl_line1}")
      OSSL_VER_MAJOR="${OSSL_VER%%\.*}"
      OSSL_VER_MINOR="${OSSL_VER%%-*}"
-     OSSL_VER_MINOR="${OSSL_VER_MINOR#$OSSL_VER_MAJOR\.}"
+     OSSL_VER_MINOR="${OSSL_VER_MINOR#"$OSSL_VER_MAJOR"\.}"
      OSSL_VER_MINOR="${OSSL_VER_MINOR%%[a-zA-Z]*}"
      # like -bad -fips etc:
-     OSSL_VER_APPENDIX="${OSSL_VER#$OSSL_VER_MAJOR\.$OSSL_VER_MINOR}"
+     OSSL_VER_APPENDIX="${OSSL_VER#"$OSSL_VER_MAJOR"\."$OSSL_VER_MINOR"}"
      OSSL_VER_PLATFORM="$(awk '/^platform: / { print $2 }' < $TEMPDIR/openssl_version_all)"
      OSSL_BUILD_DATE="$(awk '/^built on/' < $TEMPDIR/openssl_version_all)"
      OSSL_BUILD_DATE=${OSSL_BUILD_DATE#*: }
@@ -20868,7 +20868,7 @@ find_openssl_binary() {
      # the year, remove it until the end and then re-add just the year
      for yr in {2014..2029} ; do
           if [[ $OSSL_SHORT_STR =~ \ $yr ]] ; then
-               OSSL_SHORT_STR=${OSSL_SHORT_STR%%$yr*}
+               OSSL_SHORT_STR=${OSSL_SHORT_STR%%"$yr"*}
                OSSL_SHORT_STR="${OSSL_SHORT_STR}${yr}"
                break
           fi
@@ -20905,7 +20905,7 @@ find_openssl_binary() {
      if [[ "$openssl_location" == ${PWD}/bin ]]; then
           OPENSSL_LOCATION="\$PWD/bin/$(basename "$openssl_location")"
      elif [[ "$openssl_location" =~ $cwd ]] && [[ "$cwd" != '.' ]]; then
-          OPENSSL_LOCATION="${openssl_location%%$cwd}"
+          OPENSSL_LOCATION="${openssl_location%%"$cwd"}"
      else
           OPENSSL_LOCATION="$openssl_location"
      fi
@@ -24842,7 +24842,6 @@ parse_cmd_line() {
           if [[ -f $MTLS ]]; then
                grep -q 'BEGIN CERTIFICATE' "$MTLS" || fatal_cmd_line "\"$MTLS\" is not a client certificate file in PEM format" $ERR_RESOURCE
                grep -q 'BEGIN PRIVATE KEY\|BEGIN RSA PRIVATE KEY' "$MTLS" || fatal_cmd_line "\"$MTLS\" the not encrypted private key is missing in the specified PEM file" $ERR_RESOURCE
-               MTLS=$MTLS
           else
                [[ -s "$MTLS" ]] || fatal_cmd_line "the specified client certificate file \"$MTLS\" does not exist" $ERR_RESOURCE
           fi
