@@ -3381,9 +3381,10 @@ emphasize_stuff_in_headers() (
                match="$BASH_REMATCH"
                pr_yellow "$match"
                stuff="${stuff/#$match}"
-          elif [[ "${stuff:0:1}" =~ [0-9] ]]; then
-               pr_brown "${stuff:0:1}"
-               stuff="${stuff:1}"
+          elif [[ "$stuff" =~ ^[0-9][0-9][0-9][0-9][0-9][0-9][0-9]|^[0-9][0-9][0-9][0-9][0-9][0-9]|^[0-9][0-9][0-9][0-9][0-9]|^[0-9][0-9][0-9][0-9]|^[0-9][0-9][0-9]|^[0-9][0-9]|^[0-9] ]]; then
+               match="$BASH_REMATCH"
+               pr_brown "$match"
+               stuff="${stuff/#$match}"
           else
                out "${stuff:0:1}"
                stuff="${stuff:1}"
