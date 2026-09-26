@@ -6861,6 +6861,8 @@ pr_kem_param_set_quality() {
           "MLKEM512") bits=128 ;;
           "MLKEM768") bits=192 ;;
           "MLKEM1024") bits=256 ;;
+          "SecP256r1MLKEM512") bits=128 ;;
+          "MLKEM512X25519") bits=128 ;;
           "SecP256r1MLKEM768") bits=192 ;;
           "X25519MLKEM768") bits=192 ;;
           "SecP384r1MLKEM1024") bits=256 ;;
@@ -11141,13 +11143,13 @@ run_fs() {
      local fs_cipher_list="DHE-DSS-AES128-GCM-SHA256:DHE-DSS-AES128-SHA256:DHE-DSS-AES128-SHA:DHE-DSS-AES256-GCM-SHA384:DHE-DSS-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-DSS-CAMELLIA128-SHA256:DHE-DSS-CAMELLIA128-SHA:DHE-DSS-CAMELLIA256-SHA256:DHE-DSS-CAMELLIA256-SHA:DHE-DSS-SEED-SHA:DHE-RSA-AES128-CCM8:DHE-RSA-AES128-CCM:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-CCM8:DHE-RSA-AES256-CCM:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:DHE-RSA-CAMELLIA128-SHA256:DHE-RSA-CAMELLIA128-SHA:DHE-RSA-CAMELLIA256-SHA256:DHE-RSA-CAMELLIA256-SHA:DHE-RSA-CHACHA20-POLY1305-OLD:DHE-RSA-CHACHA20-POLY1305:DHE-RSA-SEED-SHA:ECDHE-ECDSA-AES128-CCM8:ECDHE-ECDSA-AES128-CCM:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-ECDSA-AES256-CCM8:ECDHE-ECDSA-AES256-CCM:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-CAMELLIA128-SHA256:ECDHE-ECDSA-CAMELLIA256-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305-OLD:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-RSA-CAMELLIA128-SHA256:ECDHE-RSA-CAMELLIA256-SHA384:ECDHE-RSA-CHACHA20-POLY1305-OLD:ECDHE-RSA-CHACHA20-POLY1305"
      local fs_hex_cipher_list="" ciphers_to_test tls13_ciphers_to_test
      local ecdhe_cipher_list="" tls13_cipher_list="" ecdhe_cipher_list_hex="" ffdhe_cipher_list_hex=""
-     local curves_hex=("00,01" "00,02" "00,03" "00,04" "00,05" "00,06" "00,07" "00,08" "00,09" "00,0a" "00,0b" "00,0c" "00,0d" "00,0e" "00,0f" "00,10" "00,11" "00,12" "00,13" "00,14" "00,15" "00,16" "00,17" "00,18" "00,19" "00,1a" "00,1b" "00,1c" "00,1d" "00,1e" "00,1f" "00,20" "00,21" "00,29" "02,00" "02,01" "02,02" "11,eb" "11,ec" "11,ed" "11,ee" "63,99")
-     local -a curves_ossl=("sect163k1" "sect163r1" "sect163r2" "sect193r1" "sect193r2" "sect233k1" "sect233r1" "sect239k1" "sect283k1" "sect283r1" "sect409k1" "sect409r1" "sect571k1" "sect571r1" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "prime192v1" "secp224k1" "secp224r1" "secp256k1" "prime256v1" "secp384r1" "secp521r1" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13" "curveSM2" "MLKEM512" "MLKEM768" "MLKEM1024" "SecP256r1MLKEM768" "X25519MLKEM768" "SecP384r1MLKEM1024" "curveSM2MLKEM768" "X25519Kyber768Draft00")
-     local -a curves_ossl_output=("K-163" "sect163r1" "B-163" "sect193r1" "sect193r2" "K-233" "B-233" "sect239k1" "K-283" "B-283" "K-409" "B-409" "K-571" "B-571" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "P-192" "secp224k1" "P-224" "secp256k1" "P-256" "P-384" "P-521" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13" "curveSM2" "MLKEM512" "MLKEM768" "MLKEM1024" "SecP256r1MLKEM768" "X25519MLKEM768" "SecP384r1MLKEM1024" "curveSM2MLKEM768" "X25519Kyber768Draft00")
-     local -ai curves_bits=(163 162 163 193 193 232 233 238 281 282 407 409 570 570 161 161 161 192 192 225 224 256 256 384 521 256 384 512 253 448 256 384 512 256 128 192 256 192 192 256 192 128)
+     local curves_hex=("00,01" "00,02" "00,03" "00,04" "00,05" "00,06" "00,07" "00,08" "00,09" "00,0a" "00,0b" "00,0c" "00,0d" "00,0e" "00,0f" "00,10" "00,11" "00,12" "00,13" "00,14" "00,15" "00,16" "00,17" "00,18" "00,19" "00,1a" "00,1b" "00,1c" "00,1d" "00,1e" "00,1f" "00,20" "00,21" "00,29" "02,00" "02,01" "02,02" "11,e9" "11,ea" "11,eb" "11,ec" "11,ed" "11,ee" "63,99")
+     local -a curves_ossl=("sect163k1" "sect163r1" "sect163r2" "sect193r1" "sect193r2" "sect233k1" "sect233r1" "sect239k1" "sect283k1" "sect283r1" "sect409k1" "sect409r1" "sect571k1" "sect571r1" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "prime192v1" "secp224k1" "secp224r1" "secp256k1" "prime256v1" "secp384r1" "secp521r1" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13" "curveSM2" "MLKEM512" "MLKEM768" "MLKEM1024" "SecP256r1MLKEM512" "MLKEM512X25519" "SecP256r1MLKEM768" "X25519MLKEM768" "SecP384r1MLKEM1024" "curveSM2MLKEM768" "X25519Kyber768Draft00")
+     local -a curves_ossl_output=("K-163" "sect163r1" "B-163" "sect193r1" "sect193r2" "K-233" "B-233" "sect239k1" "K-283" "B-283" "K-409" "B-409" "K-571" "B-571" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "P-192" "secp224k1" "P-224" "secp256k1" "P-256" "P-384" "P-521" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13" "curveSM2" "MLKEM512" "MLKEM768" "MLKEM1024" "SecP256r1MLKEM512" "MLKEM512X25519" "SecP256r1MLKEM768" "X25519MLKEM768" "SecP384r1MLKEM1024" "curveSM2MLKEM768" "X25519Kyber768Draft00")
+     local -ai curves_bits=(163 162 163 193 193 232 233 238 281 282 407 409 570 570 161 161 161 192 192 225 224 256 256 384 521 256 384 512 253 448 256 384 512 256 128 192 256 128 128 192 192 256 192 128)
      # Many curves have been deprecated, and RFC 8446, Appendix B.3.1.4, states
      # that these curves MUST NOT be offered in a TLS 1.3 ClientHello.
-     local -a curves_deprecated=("true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "false" "false" "false" "true" "true" "true" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false")
+     local -a curves_deprecated=("true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "false" "false" "false" "true" "true" "true" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false")
      local -a ffdhe_groups_hex=("01,00" "01,01" "01,02" "01,03" "01,04")
      local -a ffdhe_groups_output=("ffdhe2048" "ffdhe3072" "ffdhe4096" "ffdhe6144" "ffdhe8192")
      local -a supported_curve
@@ -15396,6 +15398,8 @@ parse_tls_serverhello() {
                                          "0200") echo -n "MLKEM512" >> $TMPFILE ;;
                                          "0201") echo -n "MLKEM768" >> $TMPFILE ;;
                                          "0202") echo -n "MLKEM1024" >> $TMPFILE ;;
+                                         "11E9") echo -n "SecP256r1MLKEM512" >> $TMPFILE ;;
+                                         "11EA") echo -n "MLKEM512X25519" >> $TMPFILE ;;
                                          "11EB") echo -n "SecP256r1MLKEM768" >> $TMPFILE ;;
                                          "11EC") echo -n "X25519MLKEM768" >> $TMPFILE ;;
                                          "11ED") echo -n "SecP384r1MLKEM1024" >> $TMPFILE ;;
@@ -15500,6 +15504,8 @@ parse_tls_serverhello() {
                                     512) dh_bits=128 ; named_curve_str="MLKEM512" ;;
                                     513) dh_bits=192 ; named_curve_str="MLKEM768" ;;
                                     514) dh_bits=256 ; named_curve_str="MLKEM1024" ;;
+                                    4585) dh_bits=128 ; named_curve_str="SecP256r1MLKEM512" ;;
+                                    4586) dh_bits=128 ; named_curve_str="MLKEM512X25519" ;;
                                     4587) dh_bits=192 ; named_curve_str="SecP256r1MLKEM768" ;;
                                     4588) dh_bits=192 ; named_curve_str="X25519MLKEM768" ;;
                                     4589) dh_bits=256 ; named_curve_str="SecP384r1MLKEM1024" ;;
@@ -15548,6 +15554,47 @@ parse_tls_serverhello() {
                                          debugme prln_warning "Your $OPENSSL doesn't support ML-KEM"
                                     else
                                          key_bitstring="-----BEGIN CIPHERTEXT------${tls_serverhello_ascii:offset:msg_len}-----END CIPHERTEXT------"
+                                    fi
+                               elif [[ $named_curve -eq 4585 ]]; then
+                                    # The server's key share is the concatenation of a P-256 public key and a ML-KEM-512 ciphertext
+                                    if [[ $msg_len -ne 1666 ]]; then
+                                         debugme tmln_warning "Malformed key share extension."
+                                         [[ $DEBUG -ge 1 ]] && tmpfile_handle ${FUNCNAME[0]}.txt
+                                         return 1
+                                    fi
+                                    if [[ ! "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
+                                         debugme prln_warning "Your $OPENSSL doesn't support ML-KEM"
+                                    else
+                                         key_bitstring="3059301306072a8648ce3d020106082a8648ce3d030107034200${tls_serverhello_ascii:offset:130}"
+                                         key_bitstring="$(hex2binary "$key_bitstring" | $OPENSSL pkey -pubin -inform DER 2>$ERRFILE)"
+                                         if [[ -z "$key_bitstring" ]]; then
+                                              debugme prln_warning "Your $OPENSSL doesn't support P-256"
+                                         else
+                                              key_bitstring="--BEGIN HYBRID CIPHERTEXT--${key_bitstring}"
+                                              key_bitstring+="-----BEGIN CIPHERTEXT------${tls_serverhello_ascii:$((offset+130)):1536}-----END CIPHERTEXT------"
+                                              key_bitstring+="--END HYBRID CIPHERTEXT--"
+                                         fi
+                                    fi
+                               elif [[ $named_curve -eq 4586 ]]; then
+                                    # The server's key share is the concatenation of a ML-KEM-512 ciphertext and a X25519 public key.
+                                    if [[ $msg_len -ne 1600 ]]; then
+                                         debugme tmln_warning "Malformed key share extension."
+                                         [[ $DEBUG -ge 1 ]] && tmpfile_handle ${FUNCNAME[0]}.txt
+                                         return 1
+                                    fi
+                                    if [[ ! "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
+                                         debugme prln_warning "Your $OPENSSL doesn't support ML-KEM"
+                                    elif ! "$HAS_X25519"; then
+                                        debugme prln_warning "Your $OPENSSL doesn't support X25519"
+                                    else
+                                         key_bitstring="302a300506032b656e032100${tls_serverhello_ascii:$((offset+1536)):64}"
+                                         key_bitstring="$(hex2binary "$key_bitstring" | $OPENSSL pkey -pubin -inform DER 2>$ERRFILE)"
+                                         if [[ -z "$key_bitstring" ]]; then
+                                              debugme prln_warning "Your $OPENSSL doesn't support X25519"
+                                         else
+                                              key_bitstring="-----BEGIN CIPHERTEXT------${tls_serverhello_ascii:offset:1536}-----END CIPHERTEXT------${key_bitstring}"
+                                              key_bitstring="--BEGIN HYBRID CIPHERTEXT--${key_bitstring}--END HYBRID CIPHERTEXT--"
+                                         fi
                                     fi
                                elif [[ $named_curve -eq 4587 ]]; then
                                     # The server's key share is the concatenation of a P-256 public key and a ML-KEM-768 ciphertext
@@ -16653,10 +16700,10 @@ prepare_tls_clienthello() {
                     # regardless of whether testssl.sh can decrypt the response.
                     extension_supported_groups="
                     00,0a,                      # Type: Supported Groups, see RFC 8446
-                    00,28, 00,26,               # lengths
+                    00,2c, 00,2a,               # lengths
                     00,1d, 00,17, 00,1e, 00,18, 00,19, 00,1f, 00,20, 00,21,
-                    01,00, 01,01, 02,00, 02,01, 02,02, 11,eb, 11,ec, 11,ed,
-                    63,99, 00,29, 11,ee"
+                    01,00, 01,01, 02,00, 02,01, 02,02, 11,e9, 11,ea, 11,eb,
+                    11,ec, 11,ed, 63,99, 00,29, 11,ee"
                elif [[ "$process_full" == all+ ]]; then
                     # Since the response needs to be decrypted, only include groups that can be
                     # decrypted using $OPENSSL. Place X25519 and X448 early in the list, if they
@@ -16668,8 +16715,8 @@ prepare_tls_clienthello() {
                     fi
                     "$HAS_X25519" && extension_supported_groups=", 00,1d$extension_supported_groups"
                     if [[ "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
-                         "$HAS_X25519" && extension_supported_groups+=", 11,ec"
-                         extension_supported_groups+=", 02,00, 02,01, 02,02, 11,eb, 11,ed"
+                         "$HAS_X25519" && extension_supported_groups+=", 11,ea, 11,ec"
+                         extension_supported_groups+=", 02,00, 02,01, 02,02, 11,e9, 11,eb, 11,ed"
                     fi
                     extension_supported_groups="00,0a, 00,$(printf "%02x" $((2+2*${#extension_supported_groups}/7))), 00,$(printf "%02x" $((2*${#extension_supported_groups}/7)))$extension_supported_groups"
                else
@@ -16690,7 +16737,7 @@ prepare_tls_clienthello() {
                          extension_supported_groups+=", 00,1d"
                     fi
                     ! "$HAS_X448" && extension_supported_groups+=", 00,1e"
-                    extension_supported_groups+=", 02,00, 02,01, 02,02, 11,eb, 11,ec, 11,ed, 63,99, 00,29, 11,ee"
+                    extension_supported_groups+=", 02,00, 02,01, 02,02, 11,e9, 11,ea, 11,eb, 11,ec, 11,ed, 63,99, 00,29, 11,ee"
                     extension_supported_groups="00,0a, 00,28, 00,26$extension_supported_groups"
                fi
 
