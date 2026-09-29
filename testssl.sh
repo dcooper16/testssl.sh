@@ -351,6 +351,7 @@ HAS_X25519=false
 HAS_SIGALGS=false
 OSSL_SUPPORTED_SIGALGS=""
 HAS_PKUTIL=false
+HAS_PKUTIL_DECAP=false
 HAS_PKEY=false
 HAS_NO_SSL2=false
 HAS_NOSERVERNAME=false
@@ -15552,7 +15553,7 @@ parse_tls_serverhello() {
                                     key_bitstring="3082${len1}$key_bitstring"
                                elif [[ $named_curve -ge 512 ]] && [[ $named_curve -le 514 ]]; then
                                     # The server's key share is a ML-KEM-512, ML-KEM-768, or ML-KEM-1024 ciphertext
-                                    if [[ ! "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
+                                    if ! "$HAS_PKUTIL_DECAP" || [[ ! "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
                                          debugme prln_warning "Your $OPENSSL doesn't support ML-KEM"
                                     else
                                          key_bitstring="-----BEGIN CIPHERTEXT------${tls_serverhello_ascii:offset:msg_len}-----END CIPHERTEXT------"
@@ -15605,7 +15606,7 @@ parse_tls_serverhello() {
                                          [[ $DEBUG -ge 1 ]] && tmpfile_handle ${FUNCNAME[0]}.txt
                                          return 1
                                     fi
-                                    if [[ ! "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
+                                    if ! "$HAS_PKUTIL_DECAP" || [[ ! "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
                                          debugme prln_warning "Your $OPENSSL doesn't support ML-KEM"
                                     else
                                          key_bitstring="3059301306072a8648ce3d020106082a8648ce3d030107034200${tls_serverhello_ascii:offset:130}"
@@ -15625,7 +15626,7 @@ parse_tls_serverhello() {
                                          [[ $DEBUG -ge 1 ]] && tmpfile_handle ${FUNCNAME[0]}.txt
                                          return 1
                                     fi
-                                    if [[ ! "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
+                                    if ! "$HAS_PKUTIL_DECAP" || [[ ! "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
                                          debugme prln_warning "Your $OPENSSL doesn't support ML-KEM"
                                     elif ! "$HAS_X25519"; then
                                         debugme prln_warning "Your $OPENSSL doesn't support X25519"
@@ -15646,7 +15647,7 @@ parse_tls_serverhello() {
                                          [[ $DEBUG -ge 1 ]] && tmpfile_handle ${FUNCNAME[0]}.txt
                                          return 1
                                     fi
-                                    if [[ ! "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
+                                    if ! "$HAS_PKUTIL_DECAP" || [[ ! "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
                                          debugme prln_warning "Your $OPENSSL doesn't support ML-KEM"
                                     else
                                          key_bitstring="3076301006072a8648ce3d020106052b81040022036200${tls_serverhello_ascii:offset:194}"
@@ -15666,7 +15667,7 @@ parse_tls_serverhello() {
                                          [[ $DEBUG -ge 1 ]] && tmpfile_handle ${FUNCNAME[0]}.txt
                                          return 1
                                     fi
-                                    if [[ ! "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
+                                    if ! "$HAS_PKUTIL_DECAP" || [[ ! "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
                                          debugme prln_warning "Your $OPENSSL doesn't support ML-KEM"
                                     else
                                          key_bitstring="3059301306072a8648ce3d020106082a811ccf5501822d034200${tls_serverhello_ascii:offset:130}"
@@ -16716,7 +16717,7 @@ prepare_tls_clienthello() {
                          extension_supported_groups=", 00,17, 00,18, 00,19, 00,1f, 00,20, 00,21, 01,00, 01,01"
                     fi
                     "$HAS_X25519" && extension_supported_groups=", 00,1d$extension_supported_groups"
-                    if [[ "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
+                    if "$HAS_PKUTIL_DECAP" && [[ "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
                          "$HAS_X25519" && extension_supported_groups+=", 11,ea, 11,ec"
                          extension_supported_groups+=", 02,00, 02,01, 02,02, 11,e9, 11,eb, 11,ed"
                     fi
@@ -21340,14 +21341,13 @@ find_openssl_binary() {
      local openssl_location="" cwd=""
      local curve="" ossl_tls13_supported_curves
      local ossl_line1="" yr=""
-     # FIXME: At the moment curves_ossl does not include any post-quantum key-exchange
-     # groups (e.g., MLKEM512, MLKEM768, MLKEM1024, SecP256r1MLKEM768, X25519MLKEM768,
-     # SecP384r1MLKEM1024, curveSM2MLKEM768). They do not need to be included since they are only
-     # supported by OpenSSL 3.5.0 (and above), and "$OPENSSL list -tls-groups" is used
-     # instead of curves_ossl to populate $OSSL_SUPPORTED_CURVES. If newer versions of
+     # FIXME: At the moment curves_ossl only includes one post-quantum key-exchange
+     # group (X25519MLKEM768). The other PQC groups do not need to be included since
+     # they are only supported by OpenSSL 3.5.0 (and above), and "$OPENSSL list -tls-groups"
+     # is used instead of curves_ossl to populate $OSSL_SUPPORTED_CURVES. If newer versions of
      # LibreSSL include support for groups that are not in curves_ossl, then they
      # should be added.
-     local -a curves_ossl=("sect163k1" "sect163r1" "sect163r2" "sect193r1" "sect193r2" "sect233k1" "sect233r1" "sect239k1" "sect283k1" "sect283r1" "sect409k1" "sect409r1" "sect571k1" "sect571r1" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "prime192v1" "secp224k1" "secp224r1" "secp256k1" "prime256v1" "secp384r1" "secp521r1" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13" "ffdhe2048" "ffdhe3072" "ffdhe4096" "ffdhe6144" "ffdhe8192")
+     local -a curves_ossl=("sect163k1" "sect163r1" "sect163r2" "sect193r1" "sect193r2" "sect233k1" "sect233r1" "sect239k1" "sect283k1" "sect283r1" "sect409k1" "sect409r1" "sect571k1" "sect571r1" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "prime192v1" "secp224k1" "secp224r1" "secp256k1" "prime256v1" "secp384r1" "secp521r1" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13" "ffdhe2048" "ffdhe3072" "ffdhe4096" "ffdhe6144" "ffdhe8192" "X25519MLKEM768")
 
      # 0. check environment variable whether it's executable
      if [[ -n "$OPENSSL" ]] && [[ ! -x "$OPENSSL" ]]; then
@@ -21471,6 +21471,7 @@ find_openssl_binary() {
      OSSL_SUPPORTED_SIGALGS=""
      HAS_PKEY=false
      HAS_PKUTIL=false
+     HAS_PKUTIL_DECAP=false
      HAS_ALPN=false
      HAS_NPN=false
      HAS_FALLBACK_SCSV=false
@@ -21508,6 +21509,7 @@ find_openssl_binary() {
      $OPENSSL genpkey -algorithm X25519 2>&1 | grep -Eaq "not found|unsupported" || HAS_X25519=true
      $OPENSSL pkey -help 2>&1 | grep -q Error || HAS_PKEY=true
      $OPENSSL pkeyutl 2>&1 | grep -q Error ||  HAS_PKUTIL=true
+     "$HAS_PKUTIL" && $OPENSSL pkeyutl -decap 2>&1 | grep -q "no private key given" && HAS_PKUTIL_DECAP=true
 
      # In order to avoid delays due to lookups of the hostname "invalid." we just try to avoid using "-connect invalid."
      # when possible. The following does a check fopr that. For WSL we stick for now to the old scheme. Not sure about Cygwin
@@ -22030,6 +22032,7 @@ HAS_CIPHERSUITES: $HAS_CIPHERSUITES
 HAS_SECLEVEL: $HAS_SECLEVEL
 HAS_PKEY: $HAS_PKEY
 HAS_PKUTIL: $HAS_PKUTIL
+HAS_PKUTIL_DECAP: $HAS_PKUTIL_DECAP
 HAS_PROXY: $HAS_PROXY
 HAS_XMPP: $HAS_XMPP
 HAS_XMPP_SERVER: $HAS_XMPP_SERVER
