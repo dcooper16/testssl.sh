@@ -12,6 +12,12 @@ Disclosure](https://en.wikipedia.org/wiki/Full_disclosure_(computer_security)#Co
 to have a PoC, it will be much appreciated but it is not mandatory. Using [Full Disclosure](https://en.wikipedia.org/wiki/Full_disclosure_(computer_security)#Full_disclosure) might be a problem for the people setting up a website using testssl.sh as a scanner or users.
 Also keep in mind that the maintainers here have a professional attitude but this project, it is a spare time project.
 
+### How do I do that?
+
+"Create new Issue" --> "Report a security vulnerability" . Then on the LHS you should see "Advisory" which you need to fill out. That stays private until we fixed your point or disregard it.
+
+The UI is not very intuitive, thus if that doesn't work file a public issue that **this doesn't work**.
+
 
 ## Supported Versions
 
