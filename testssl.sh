@@ -336,6 +336,7 @@ HAS_DNS_SANS=false                      # Whether the certificate includes a sub
 HAS_DH_BITS=${HAS_DH_BITS:-false}       # These are variables which are set by find_openssl_binary()
 HAS_CURVES=false
 OSSL_SUPPORTED_CURVES=""
+declare -i NR_OSSL_SUPPORTED_CURVES
 HAS_SSL2=false
 HAS_SSL3=false
 HAS_TLS1=false
@@ -2414,7 +2415,7 @@ string_to_asciihex() {
 s_client_options() {
      local options=" $1"
      local ciphers="notpresent" tls13_ciphers="notpresent"
-     local cipher tls13_supported_ciphers=""
+     local cipher tls13_supported_ciphers="" curves_list
 
      # Extract the TLSv1.3 ciphers and the non-TLSv1.3 ciphers
      if [[ " $options " =~ \ -cipher\  ]]; then
@@ -2528,6 +2529,19 @@ s_client_options() {
           ! "$HAS_CURVES" && options="${options// -curves / -groups }"
           [[ "$1" =~ secp192r1 ]] && options="${options//secp192r1/prime192v1}"
           [[ "$1" =~ secp256r1 ]] && options="${options//secp256r1/prime256v1}"
+     elif [[ $NR_OSSL_SUPPORTED_CURVES -le 28 ]]; then
+          # OpenSSL does not include all of the groups that it supports in the ClientHello
+          # by default. So, if the test does not specify which groups to include, then
+          # specify that all should be included. However, only do this if at most 28 groups
+          # are supported, since some versions of OpenSSL fail if more than 28 are specified.
+          curves_list="$(strip_trailing_space "$(strip_leading_space "$OSSL_SUPPORTED_CURVES")")"
+          curves_list="${curves_list//  / }"
+          curves_list="${curves_list// /:}"
+          if ! "$HAS_CURVES"; then
+               options+=" -groups $curves_list"
+          else
+               options+=" -curves $curves_list"
+          fi
      fi
      tm_out "$options"
 
@@ -11250,7 +11264,7 @@ run_fs() {
           # be tested in batches.
           curves_list1="$(strip_trailing_space "$(strip_leading_space "$OSSL_SUPPORTED_CURVES")")"
           curves_list1="${curves_list1//  / }"
-          if [[ "$(count_words "$OSSL_SUPPORTED_CURVES")" -gt 28 ]]; then
+          if [[ $NR_OSSL_SUPPORTED_CURVES -gt 28 ]]; then
                # Place the first 28 supported curves in curves_list1 and the remainder in curves_list2.
                curves_list2="${curves_list1#* * * * * * * * * * * * * * * * * * * * * * * * * * * * }"
                curves_list1="${curves_list1%"$curves_list2"}"
@@ -21595,6 +21609,7 @@ find_openssl_binary() {
                done
           fi
      fi
+     NR_OSSL_SUPPORTED_CURVES="$(count_words "$OSSL_SUPPORTED_CURVES")"
 
      # For the following we feel safe enough to query the s_client help functions.
      # That was not good enough for the previous lookups
