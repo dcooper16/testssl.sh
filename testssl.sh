@@ -12064,13 +12064,14 @@ run_alpn() {
 
 # arg1: send string
 # arg2: success string: an egrep pattern
-# arg3: number of loops we should read from the buffer (optional, otherwise STARTTLS_SLEEP)
+# arg3: number of loops we should read from the buffer. As of 2026 we were good with max 2, see #3154
+#       To be safe we're using 4 in calling starttls_io() to look for the pattern in $2
+#
 starttls_io() {
-     local nr_waits=$STARTTLS_SLEEP
+     local nr_waits=$3
      local buffer=""
      local -i i
 
-     [[ -n "$3" ]] && waitsleep=$3
      [[ -z "$2" ]] && echo "FIXME $((LINENO))"
 
      # If there's a sending part it's IO. Postgres sends via socket and replies via
@@ -12091,7 +12092,7 @@ starttls_io() {
      for ((i=1; i < nr_waits; i++ )); do
           [[ "$DEBUG" -ge 2 ]] && echo -en "\nS: " && echo $buffer
           if [[ "$buffer" =~ $2 ]]; then
-               debugme echo "     ---> reply matched \"$2\""
+               debugme echo "     ---> reply # $i matched \"$2\""
                # the fd sometimes still seem to contain chars which confuses the following TLS handshake, trying to empty:
                # dd of=/dev/null bs=512 count=1 <&5 2>/dev/null
                return 0
@@ -12308,9 +12309,9 @@ starttls_xmpp_dialog() {
      namespace="jabber:client"
      [[ "$STARTTLS_PROTOCOL" == xmpp-server ]] && namespace="jabber:server"
 
-     starttls_io "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='$namespace' to='$XMPP_HOST' version='1.0'>"  'starttls(.*)features' 1 &&
-     starttls_io "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>"  '<proceed'  1
-     # starttls_io "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='"$namespace"' to='"$XMPP_HOST"' version='1.0'>"  'JUSTSEND' 2
+     starttls_io "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='$namespace' to='$XMPP_HOST' version='1.0'>"  'starttls(.*)features' 4 &&
+     starttls_io "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>"  '<proceed'  4
+     # starttls_io "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='"$namespace"' to='"$XMPP_HOST"' version='1.0'>"  'JUSTSEND' 4
      ret=$?
      debugme echo "=== finished xmpp STARTTLS dialog with ${ret} ==="
      return $ret
@@ -12334,8 +12335,8 @@ starttls_postgres_dialog() {
      local starttls_init=", x00, x00 ,x00 ,x08 ,x04 ,xD2 ,x16 ,x2F"
 
      debugme echo "=== starting postgres STARTTLS dialog ==="
-     socksend_x "${starttls_init}" 0                          && debugme echo "${debugpad}initiated STARTTLS" &&
-     starttls_io "" S 1                                     && debugme echo "${debugpad}received ack (=\"S\") for STARTTLS"
+     socksend_x "${starttls_init}" 0                        && debugme echo "${debugpad}initiated STARTTLS" &&
+     starttls_io "" S 4                                     && debugme echo "${debugpad}received ack (=\"S\") for STARTTLS"
      ret=$?
      debugme echo "=== finished postgres STARTTLS dialog with ${ret} ==="
      return $ret
