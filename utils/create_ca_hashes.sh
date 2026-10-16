@@ -14,7 +14,7 @@ if [[ ! -e etc ]]; then
 	exit 99
 fi
 
-echo "Extracting private key hashes from CA bundles"
+echo "Extracting SPKI (public key) hashes from CA bundles"
 echo -n > "$TEMPDIR/cahashes"
 for bundle_fname in etc/*.pem; do
 	if [[ ! -r $bundle_fname ]]; then
