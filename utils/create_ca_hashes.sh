@@ -6,7 +6,8 @@
 # This file generates the file etc/ca_hashes.txt from the (root)certificate
 # Bundles in etc (etc/*.pem)
 
-TEMPDIR="/tmp"
+TEMPDIR=$(mktemp -d)
+trap 'rm -rf "$TEMPDIR"' EXIT
 
 # Check if we are in the right directory
 if [[ ! -e etc ]]; then
