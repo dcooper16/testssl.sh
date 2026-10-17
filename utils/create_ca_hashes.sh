@@ -33,7 +33,7 @@ for bundle_fname in etc/*.pem; do
    		echo -n "."
         hpkp_key_ca="$( ( openssl x509 -in "$cert_fname" -pubkey -noout | grep -v PUBLIC | openssl base64 -d |
             openssl dgst -sha256 -binary | openssl enc -base64 ) 2>/dev/null )"
-		hpkp_name=$( openssl x509 -in "$cert_fname" -subject -noout 2>/dev/null | sed "s/^subject= //")
+		hpkp_name=$( openssl x509 -in "$cert_fname" -subject -noout -nameopt compat 2>/dev/null | sed "s/^subject= //")
 		if [[ $(echo $hpkp_name|grep 'CN='|wc -l) -eq 1 ]]; then
 			hpkp_name=$(echo -n $hpkp_name|sed 's/^.*CN=//'|sed 's/\/.*$//')
 		fi
@@ -45,4 +45,4 @@ done
 # Make a backup first
 cp etc/ca_hashes.txt etc/ca_hashes.txt.bak
 
-sort -u "$TEMPDIR/cahashes" > etc/ca_hashes.txt
+LC_ALL=C sort -u "$TEMPDIR/cahashes" > etc/ca_hashes.txt

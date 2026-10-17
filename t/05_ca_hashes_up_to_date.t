@@ -12,13 +12,20 @@ use Test::More;
 my $rc = system('./utils/create_ca_hashes.sh');
 is($rc, 0, "create_ca_hashes.sh exited successfully");
 
-# Check whether the regenerated file differs from what is committed.
-# Read git's exit status via system() and Perl's $?. Do NOT use a
-# backtick `...; echo $?`: Perl interpolates $? as the *previous*
-# command's status (the script's, always 0), so the shell would just
-# echo 0 and the diff would never be detected.
-my $diff_rc = system('git diff --quiet -- etc/ca_hashes.txt 2>/dev/null');
-my $has_diff = (($diff_rc >> 8) == 0) ? "0" : "1";
+# Compare the set of SPKI hashes (field 1) between the committed file and
+# the freshly regenerated one, order-independently. We do NOT compare the
+# whole file byte-for-byte: the name column (field 2) and the line order
+# are cosmetic and are not stable across platforms. The name comes from
+# `openssl x509 -subject`, which formats differently between LibreSSL
+# (macOS) and OpenSSL (Linux); the order comes from `sort`, whose collation
+# differs between BSD libc and glibc even under an identically-named locale.
+# Only the SPKI hash is deterministic, and it is the sole column testssl.sh
+# consumes (grep -h "$hpkp_spki"), so that is what "up to date" means here.
+# LC_ALL=C pins the collation so the set comparison is byte-order and
+# platform-independent.
+my $committed   = `git show HEAD:etc/ca_hashes.txt 2>/dev/null | cut -d' ' -f1 | LC_ALL=C sort -u`;
+my $regenerated = `cut -d' ' -f1 etc/ca_hashes.txt 2>/dev/null | LC_ALL=C sort -u`;
+my $has_diff = ($committed eq $regenerated) ? "0" : "1";
 
 # Restore the original file and remove the .bak the script creates
 system('git checkout -- etc/ca_hashes.txt 2>/dev/null');
